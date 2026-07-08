@@ -1,0 +1,26 @@
+Fluxo de cadastro pelo cliente:
+
+1. Dono, envia o link da página de cadastro.
+
+2. Cliente faz o cadastro, e informa o apelido para o dono 
+aprovar e gerar uma senha de acesso ao cliente cadastrado.
+
+3. Dono aprova o cadastro e envia a senha para o cliente. 
+
+4. Cliente acessa, faz o login, e executa o cadastro. 
+
+Dados do form que falta acrescentar:
+   - Apelido (como o cliente é chamado)
+   - Tipo de cliente: Pessoa Jurídica: <- exibe campo para cadastrar CNPJ (se possível usar API para consulta externa, ou criar um validador)
+   - Pessoa Fisica: Exibe número do CPF, que também precisa passar por validação.
+
+Obs. Campo CEP: <- Deve preencher os dados do endereço automaticamente (api)
+
+5. Na tela de login do cliente, ele ve todas suas informações, dividas, e limite de crédito que 
+pode comprar, também visualiza data de pagamento de cada pedido que será individual.
+
+6. Dono deve marcar como pago os pedidos após o cliente pagar cada fatura, a segurança por parte do
+cliente é verificar no seu sistema que fatura do pedido no dia e hora.... esta paga.
+
+7. Uma vez que o pagamento foi feito, não haverá mais como desfazer, nem por parte do dono.
+
