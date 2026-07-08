@@ -14,14 +14,17 @@ Estrutura de rotas:
 from django.contrib import admin
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
+from rest_framework.permissions import AllowAny
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView, SpectacularRedocView
 
 # Import ViewSets
 from customers.views import CustomerViewSet
 from orders.views import OrderViewSet, OrderItemViewSet, ProductViewSet
 from ledger.views import TransactionViewSet
+from orders.serializers import ProductSerializer
+from orders.models import Product
 
 # Criar router principal
 router = DefaultRouter(trailing_slash=False)
@@ -47,6 +50,7 @@ def api_root(request):
             'customers': 'http://localhost:8000/api/customers/',
             'orders': 'http://localhost:8000/api/orders/',
             'products': 'http://localhost:8000/api/products/',
+            'products_public': 'http://localhost:8000/api/products-public/',
             'transactions': 'http://localhost:8000/api/transactions/',
             'admin': 'http://localhost:8000/admin/',
             'swagger': 'http://localhost:8000/api/docs/',
@@ -56,12 +60,27 @@ def api_root(request):
     })
 
 
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def products_public(request):
+    """
+    Endpoint público para listar produtos (sem autenticação)
+    """
+    products = Product.objects.filter(is_active=True)
+    serializer = ProductSerializer(products, many=True)
+    return Response({
+        'count': len(serializer.data),
+        'results': serializer.data
+    })
+
+
 urlpatterns = [
     # API Root
     path('', api_root, name='api-root'),
     
     # API Routes
     path('api/', include(router.urls)),
+    path('api/products-public/', products_public, name='products-public'),
     path('api/', include('customers.urls')),
     path('api/', include('orders.urls')),
     path('api/', include('ledger.urls')),

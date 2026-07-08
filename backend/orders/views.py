@@ -4,7 +4,7 @@ ViewSets para Order e OrderItem
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from django.shortcuts import get_object_or_404
 
 from .models import Order, OrderItem, Product
@@ -25,15 +25,24 @@ class ProductViewSet(viewsets.ReadOnlyModelViewSet):
     Endpoints:
     - GET /api/products/                    → Lista todos os produtos
     - GET /api/products/{id}/               → Detalha produto
+    
+    ✅ Sem autenticação requerida (público)
     """
     
     queryset = Product.objects.filter(is_active=True)
     serializer_class = ProductSerializer
+    permission_classes = [AllowAny]
     pagination_class = StandardResultsSetPagination
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['name', 'description']
     ordering_fields = ['name', 'price', 'created_at']
     ordering = ['name']
+    
+    def get_permissions(self):
+        """
+        Override: Produtos são sempre públicos (sem autenticação)
+        """
+        return [AllowAny()]
 
 
 class OrderItemViewSet(viewsets.ModelViewSet):
