@@ -8,8 +8,22 @@ class Customer(models.Model):
     class CustomerType(models.TextChoices):
         PHYSICAL = 'PF', 'Pessoa Física'
         JURIDICAL = 'PJ', 'Pessoa Jurídica'
+    
+    # Opções para status de aprovação
+    class ApprovalStatus(models.TextChoices):
+        PENDING = 'PENDENTE', 'Pendente de Aprovação'
+        APPROVED = 'APROVADO', 'Aprovado'
+        BLOCKED = 'BLOQUEADO', 'Bloqueado'
 
     user = models.OneToOneField(User, on_delete=models.PROTECT, related_name='customer_profile')
+    
+    # Status de aprovação
+    status = models.CharField(
+        max_length=10,
+        choices=ApprovalStatus.choices,
+        default=ApprovalStatus.PENDING,
+        help_text="Status de aprovação do cliente"
+    )
     
     # Identificação do cliente conforme a realidade do negócio
     customer_type = models.CharField(
@@ -20,7 +34,25 @@ class Customer(models.Model):
     nickname = models.CharField(max_length=100, help_text="Apelido ou Nome Fantasia")
     company_name = models.CharField(max_length=150, blank=True, null=True, help_text="Razão Social (Opcional)")
     
-    # Aceita de 11 (CPF) a 14 (CNPJ) dígitos puros
+    # CPF (para Pessoa Física)
+    cpf = models.CharField(
+        max_length=11,
+        blank=True,
+        null=True,
+        unique=True,
+        validators=[RegexValidator(r'^\d{11}$', 'CPF deve conter 11 dígitos')]
+    )
+    
+    # CNPJ (para Pessoa Jurídica)
+    cnpj = models.CharField(
+        max_length=14,
+        blank=True,
+        null=True,
+        unique=True,
+        validators=[RegexValidator(r'^\d{14}$', 'CNPJ deve conter 14 dígitos')]
+    )
+    
+    # Campo legado (manter compatibilidade)
     cnpj_cpf = models.CharField(
         max_length=14,
         blank=True,
@@ -42,6 +74,17 @@ class Customer(models.Model):
     city = models.CharField(max_length=100, help_text="Cidade")
     state = models.CharField(max_length=2, help_text="UF (ex: SP)")
 
+    # Campos de aprovação
+    approved_at = models.DateTimeField(null=True, blank=True, help_text="Data/hora da aprovação")
+    approved_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='approved_customers',
+        help_text="Admin que aprovou o cliente"
+    )
+
 
     credit_limit = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     
@@ -53,10 +96,18 @@ class Customer(models.Model):
         indexes = [
             models.Index(fields=['created_at']),
             models.Index(fields=['nickname']),
+            models.Index(fields=['status']),
+            models.Index(fields=['cpf']),
+            models.Index(fields=['cnpj']),
         ]
 
     def __str__(self):
-        return f"{self.nickname} ({self.get_customer_type_display()})"
+        return f"{self.nickname} ({self.get_customer_type_display()}) - {self.get_status_display()}"
+    
+    @property
+    def is_approved(self):
+        """Verifica se o cliente foi aprovado"""
+        return self.status == self.ApprovalStatus.APPROVED
 
     def get_balance(self):
         """Calcula o saldo atual baseado no histórico do livro caixa (CREDIT - DEBIT)"""

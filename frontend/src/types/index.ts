@@ -1,3 +1,7 @@
+// Tipos de Status do Cliente
+export type ApprovalStatus = 'PENDENTE' | 'APROVADO' | 'BLOQUEADO';
+export type CustomerType = 'PF' | 'PJ';
+
 export interface Product {
   id: number;
   name: string;
@@ -10,7 +14,13 @@ export interface Product {
 export interface Customer {
   id: number;
   nickname: string;
-  customer_type: string;
+  customer_type: CustomerType;
+
+  // CPF ou CNPJ
+  cpf?: string; // Para PF (11 dígitos)
+  cnpj?: string; // Para PJ (14 dígitos)
+
+  // Contato e Endereço
   phone: string;
   zip_code: string;
   street: string;
@@ -18,8 +28,33 @@ export interface Customer {
   neighborhood: string;
   city: string;
   state: string;
+  company_name?: string; // Para PJ
+
+  // Crédito e Saldo
   credit_limit: number;
+  balance?: number; // Saldo atual
+
+  // Status de Aprovação
+  status?: ApprovalStatus; // PENDENTE, APROVADO, BLOQUEADO
+  approved_at?: string;
+  is_approved?: boolean;
+
+  // Autenticação
   token?: string;
+  access_token?: string;
+  refresh_token?: string;
+
+  // Meta
+  created_at?: string;
+}
+
+// Dados de endereço para auto-preenchimento via ViaCEP
+export interface Address {
+  street: string;
+  neighborhood: string;
+  city: string;
+  state: string;
+  zip_code: string;
 }
 
 export interface CartItem {
@@ -52,5 +87,29 @@ export interface Transaction {
   transaction_type: 'CREDIT' | 'DEBIT';
   amount: number;
   description: string;
+  created_at: string;
+}
+
+// Respostas de API
+export interface LoginResponse {
+  access_token: string;
+  refresh_token: string;
+  customer: Customer;
+}
+
+export interface ViaCEPResponse {
+  street: string;
+  neighborhood: string;
+  city: string;
+  state: string;
+  zip_code: string;
+}
+
+export interface PendingCustomer {
+  id: number;
+  nickname: string;
+  customer_type: CustomerType;
+  phone: string;
+  status: ApprovalStatus;
   created_at: string;
 }

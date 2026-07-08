@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { Customer } from '../types';
 import { ApiService } from '../services/api';
 
@@ -9,6 +9,7 @@ interface UseCustomerReturn {
   error: string | null;
   isAuthenticated: boolean;
   register: (data: Omit<Customer, 'id'>) => Promise<void>;
+  login: (nickname: string, password: string) => Promise<void>;
   logout: () => void;
   setCustomer: (customer: Customer, token: string) => void;
 }
@@ -31,32 +32,56 @@ export function useCustomer(): UseCustomerReturn {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const isAuthenticated = !!token && !!customer;
+  const isAuthenticated = !!token && !!customer && customer.status === 'APROVADO';
 
   const register = useCallback(async (data: Omit<Customer, 'id'>) => {
     setLoading(true);
     setError(null);
 
     try {
-      const result = await ApiService.registerCustomer(data);
+      const result = await ApiService.registerCustomer(data as any);
 
-      // Buscar dados do cliente registrado
-      const customerData = await ApiService.getCustomer(result.id, result.token);
-
+      // Após registro, cliente é PENDENTE, aguarda aprovação
+      // Salvar apenas para referência, mas ainda não fazer login automático
       const newCustomer: Customer = {
-        ...customerData,
-        token: result.token,
+        ...result.customer,
+        access_token: result.access_token,
       };
 
-      // Salvar no localStorage
       localStorage.setItem(STORAGE_KEYS.CUSTOMER, JSON.stringify(newCustomer));
-      localStorage.setItem(STORAGE_KEYS.TOKEN, result.token);
+      localStorage.setItem(STORAGE_KEYS.TOKEN, result.access_token);
 
-      // Atualizar estado
       setCustomerState(newCustomer);
-      setTokenState(result.token);
+      setTokenState(result.access_token);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erro ao registrar';
+      setError(errorMessage);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const login = useCallback(async (nickname: string, password: string) => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const result = await ApiService.loginCustomer(nickname, password);
+
+      // Salvar dados do cliente autenticado
+      const newCustomer: Customer = {
+        ...result.customer,
+        access_token: result.access_token,
+      };
+
+      localStorage.setItem(STORAGE_KEYS.CUSTOMER, JSON.stringify(newCustomer));
+      localStorage.setItem(STORAGE_KEYS.TOKEN, result.access_token);
+
+      setCustomerState(newCustomer);
+      setTokenState(result.access_token);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Erro ao fazer login';
       setError(errorMessage);
       throw err;
     } finally {
@@ -86,6 +111,7 @@ export function useCustomer(): UseCustomerReturn {
     error,
     isAuthenticated,
     register,
+    login,
     logout,
     setCustomer,
   };

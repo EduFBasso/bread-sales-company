@@ -1,0 +1,167 @@
+.page {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #FFF4E6 0%, #FFE4CC 100%);
+  padding: 40px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.container {
+  max-width: 400px;
+  width: 100%;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  padding: 40px;
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.header h1 {
+  margin: 0;
+  font-size: 24px;
+  color: #8B5A3C;
+}
+
+.header p {
+  margin: 8px 0 0 0;
+  color: #666;
+  font-size: 14px;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+}
+
+.formGroup label {
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: #333;
+  font-size: 14px;
+}
+
+.formGroup input {
+  padding: 12px;
+  border: 1px solid #D4825C;
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: inherit;
+  transition: border-color 0.3s;
+}
+
+.formGroup input:focus {
+  outline: none;
+  border-color: #8B5A3C;
+  box-shadow: 0 0 0 3px rgba(212, 130, 92, 0.1);
+}
+
+.formGroup input:disabled {
+  background: #f5f5f5;
+  cursor: not-allowed;
+}
+
+.errorMessage {
+  padding: 12px;
+  background: #FFE0E0;
+  color: #C00;
+  border-radius: 6px;
+  font-size: 14px;
+  border-left: 4px solid #C00;
+}
+
+.actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.submitButton {
+  flex: 1;
+  padding: 12px 16px;
+  background: #D4825C;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.submitButton:hover:not(:disabled) {
+  background: #8B5A3C;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(139, 90, 60, 0.3);
+}
+
+.submitButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.links {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.linkButton {
+  background: none;
+  border: none;
+  color: #D4825C;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: underline;
+  transition: color 0.3s;
+  padding: 0;
+}
+
+.linkButton:hover {
+  color: #8B5A3C;
+}
+
+.info {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid #EEE;
+  font-size: 12px;
+  color: #666;
+}
+
+.info p {
+  margin: 0 0 8px 0;
+  font-weight: 600;
+}
+
+.info ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.info li {
+  margin: 4px 0;
+  line-height: 1.4;
+}
+
+@media (max-width: 480px) {
+  .container {
+    padding: 24px;
+  }
+
+  .header h1 {
+    font-size: 20px;
+  }
+}

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { CustomerForm, CustomerSelector } from '../components';
 import { useCustomer } from '../hooks/useCustomer';
 import styles from './AuthPage.module.css';
