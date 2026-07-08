@@ -1,11 +1,5 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { AuthPage } from './pages/AuthPage';
 
 export default function App() {
-  return (
-    <Router>
-      <Routes>
-        <Route path="/" element={<div>Home - Em desenvolvimento</div>} />
-      </Routes>
-    </Router>
-  );
+  return <AuthPage />;
 }
