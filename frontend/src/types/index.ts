@@ -113,3 +113,6 @@ export interface PendingCustomer {
   status: ApprovalStatus;
   created_at: string;
 }
+
+// Telegram Types
+export type { TelegramNotification, TelegramCallbackData } from './telegram';
