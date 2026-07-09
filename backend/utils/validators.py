@@ -124,3 +124,91 @@ def format_cnpj(cnpj: str) -> str:
     """
     cnpj = cnpj.replace('.', '').replace('-', '').replace('/', '')
     return f'{cnpj[:2]}.{cnpj[2:5]}.{cnpj[5:8]}/{cnpj[8:12]}-{cnpj[12:]}'
+
+
+def validate_phone(phone: str) -> None:
+    """
+    Valida telefone no formato brasileiro: (XX) 9XXXX-XXXX ou equivalente com 11 dígitos.
+    
+    Args:
+        phone: String com telefone (pode incluir parênteses, traço, espaço)
+        
+    Raises:
+        ValidationError: Se telefone for inválido
+        
+    Examples:
+        validate_phone('(11) 99999-9999')  # ✅ Válido
+        validate_phone('11999999999')       # ✅ Válido
+        validate_phone('(11) 9999-9999')   # ❌ Inválido (10 dígitos)
+    """
+    # Remover caracteres especiais
+    phone = phone.replace('(', '').replace(')', '').replace('-', '').replace(' ', '')
+    
+    # Verificar se tem 11 dígitos
+    if not phone.isdigit() or len(phone) != 11:
+        raise ValidationError('Telefone deve conter 11 dígitos (XX) 9XXXX-XXXX')
+    
+    # Verificar se começa com 9 no 3º dígito (celular brasileiro)
+    if phone[2] != '9':
+        raise ValidationError('Telefone deve ser um celular (9º dígito = 9)')
+
+
+def validate_zip_code(zip_code: str) -> None:
+    """
+    Valida CEP brasileiro: XXXXXXXX (8 dígitos).
+    
+    Args:
+        zip_code: String com CEP
+        
+    Raises:
+        ValidationError: Se CEP for inválido
+        
+    Examples:
+        validate_zip_code('01310100')  # ✅ Válido
+        validate_zip_code('01310-100') # ✅ Válido (aceita com traço)
+        validate_zip_code('0131010')   # ❌ Inválido (7 dígitos)
+    """
+    # Remover traço se presente
+    zip_code = zip_code.replace('-', '').strip()
+    
+    # Verificar se tem 8 dígitos
+    if not zip_code.isdigit() or len(zip_code) != 8:
+        raise ValidationError('CEP deve conter 8 dígitos (XXXXXXXX ou XXXXX-XXX)')
+
+
+def format_phone(phone: str) -> str:
+    """
+    Formata telefone para o padrão: (XX) 9XXXX-XXXX
+    
+    Args:
+        phone: String com 11 dígitos
+        
+    Returns:
+        Telefone formatado
+        
+    Example:
+        format_phone('11999999999')  # '(11) 99999-9999'
+    """
+    phone = phone.replace('(', '').replace(')', '').replace('-', '').replace(' ', '')
+    if len(phone) == 11:
+        return f'({phone[:2]}) {phone[2:7]}-{phone[7:]}'
+    return phone
+
+
+def format_zip_code(zip_code: str) -> str:
+    """
+    Formata CEP para o padrão: XXXXX-XXX
+    
+    Args:
+        zip_code: String com 8 dígitos
+        
+    Returns:
+        CEP formatado
+        
+    Example:
+        format_zip_code('01310100')  # '01310-100'
+    """
+    zip_code = zip_code.replace('-', '').strip()
+    if len(zip_code) == 8:
+        return f'{zip_code[:5]}-{zip_code[5:]}'
+    return zip_code
