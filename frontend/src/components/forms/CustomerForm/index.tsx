@@ -203,7 +203,7 @@ export function CustomerForm({ onSubmit, isLoading = false, errors = {} }: Custo
         <Input
           name="street"
           placeholder="Avenida Paulista"
-          value={address.street}
+          defaultValue={address.street}
           disabled={Boolean(address.street)}
           required
         />
@@ -235,7 +235,7 @@ export function CustomerForm({ onSubmit, isLoading = false, errors = {} }: Custo
         <Input
           name="neighborhood"
           placeholder="Centro"
-          value={address.neighborhood}
+          defaultValue={address.neighborhood}
           disabled={Boolean(address.neighborhood)}
           required
         />
@@ -245,7 +245,7 @@ export function CustomerForm({ onSubmit, isLoading = false, errors = {} }: Custo
         <Input
           name="city"
           placeholder="São Paulo"
-          value={address.city}
+          defaultValue={address.city}
           disabled={Boolean(address.city)}
           required
         />
@@ -255,7 +255,7 @@ export function CustomerForm({ onSubmit, isLoading = false, errors = {} }: Custo
         <Input
           name="state"
           placeholder="SP"
-          value={address.state}
+          defaultValue={address.state}
           disabled={Boolean(address.state)}
           maxLength={2}
           required
