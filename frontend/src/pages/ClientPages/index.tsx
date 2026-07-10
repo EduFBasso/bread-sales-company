@@ -1,5 +1,8 @@
 import { useNavigate } from 'react-router-dom';
 import { useCustomerAuth } from '../../hooks';
+import { BalanceCard } from '../../components/BalanceCard';
+import { OrdersList } from '../../components/OrdersList';
+import { TransactionHistory } from '../../components/TransactionHistory';
 import styles from './ClientPages.module.css';
 
 export function ClientPages() {
@@ -54,13 +57,22 @@ export function ClientPages() {
           </div>
         </section>
 
+        {/* Balance & Credit Section */}
+        <BalanceCard />
+
+        {/* Orders List Section */}
+        <OrdersList />
+
+        {/* Transaction History Section */}
+        <TransactionHistory />
+
         <section className={styles.section}>
           <h3>🛠️ Próximas Funcionalidades</h3>
           <ul className={styles.featureList}>
-            <li>📊 Saldo e Crédito Disponível</li>
-            <li>📦 Meus Pedidos</li>
-            <li>💳 Histórico de Pagamentos</li>
             <li>🛒 Fazer Novo Pedido</li>
+            <li>📊 Relatórios Personalizados</li>
+            <li>⚙️ Configurações da Conta</li>
+            <li>🔔 Notificações de Pedidos</li>
           </ul>
         </section>
       </main>

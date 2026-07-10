@@ -7,6 +7,9 @@ interface CustomerData {
   customer_type: string;
   phone?: string;
   status: string;
+  current_balance?: string;
+  available_credit?: string;
+  credit_limit?: string;
 }
 
 export function useCustomerAuth() {

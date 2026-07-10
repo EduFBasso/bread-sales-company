@@ -8,3 +8,6 @@ export { useAdminLogin } from './useAdminLogin';
 export { useCustomerLogin } from './useCustomerLogin';
 export { useCustomerAuth } from './useCustomerAuth';
 export { useAdminCustomers } from './useAdminCustomers';
+export { useCustomerDashboard } from './useCustomerDashboard';
+export { useCustomerOrders } from './useCustomerOrders';
+export { useCustomerTransactions } from './useCustomerTransactions';
