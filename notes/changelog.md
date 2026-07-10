@@ -1,5 +1,40 @@
 # Registro de Alterações
 
+## [2026-07-10] - Phase 3: Customer Dashboard Enhancements ✅
+
+### PHASE 3: Frontend Dashboard Components - COMPLETED
+
+**Status:** ✅ PRODUCTION READY (awaiting backend API endpoints)
+
+#### Features Implemented:
+1. **useCustomerDashboard Hook** - Manages dashboard financial data
+2. **useCustomerOrders Hook** - Fetches customer orders list
+3. **useCustomerTransactions Hook** - Fetches payment history
+4. **BalanceCard Component** - Displays balance & credit info with visual indicators
+5. **OrdersList Component** - Shows customer orders with status tracking
+6. **TransactionHistory Component** - Transaction history table view
+
+#### Key Features:
+- ✅ Balance display with "A favor" / "Devendo" status
+- ✅ Available credit progress bar with percentage
+- ✅ Credit limit tracking
+- ✅ Order list with status badges (PENDENTE, CONFIRMADO, ENTREGUE, CANCELADO)
+- ✅ Item preview with expandable list  
+- ✅ Transaction history table
+- ✅ Empty states with helpful messaging
+- ✅ Responsive mobile-friendly design
+- ✅ Professional #D4825C theme
+
+#### Build Status:
+- Frontend: ✓ 90 modules compiled, 0 TypeScript errors
+- CSS: ✓ All modules validated
+- Build Time: 130ms
+
+#### Git Commits:
+1. `Phase 3: Customer Dashboard Enhancements`
+
+---
+
 ## [2026-07-10] - Phase 2: Customer Login & Authentication ✅
 
 ### PHASE 2: Frontend Customer Authentication - COMPLETED
