@@ -16,7 +16,6 @@ class CustomerSerializer(serializers.ModelSerializer):
         read_only=True
     )
     available_credit = serializers.DecimalField(
-        source='available_credit',
         max_digits=10,
         decimal_places=2,
         read_only=True
