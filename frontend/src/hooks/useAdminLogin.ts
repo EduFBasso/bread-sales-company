@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 
 interface AdminUser {
   id: number;
@@ -23,6 +23,12 @@ export function useAdminLogin(options?: UseAdminLoginOptions) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Ref para sempre ter acesso ao options mais recente sem recriar o login callback
+  const optionsRef = useRef(options);
+  useEffect(() => {
+    optionsRef.current = options;
+  });
+
   const login = useCallback(
     async (username: string, password: string) => {
       setLoading(true);
@@ -43,7 +49,7 @@ export function useAdminLogin(options?: UseAdminLoginOptions) {
           const errorMessage =
             data.detail || data.password?.[0] || data.username?.[0] || 'Erro ao fazer login';
           setError(errorMessage);
-          options?.onError?.(errorMessage);
+          optionsRef.current?.onError?.(errorMessage);
           return false;
         }
 
@@ -53,18 +59,18 @@ export function useAdminLogin(options?: UseAdminLoginOptions) {
         localStorage.setItem('bread_admin_role', data.role);
         localStorage.setItem('bread_admin_user', JSON.stringify(data.user));
 
-        options?.onSuccess?.(data);
+        optionsRef.current?.onSuccess?.(data);
         return true;
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Erro de conexão';
         setError(errorMessage);
-        options?.onError?.(errorMessage);
+        optionsRef.current?.onError?.(errorMessage);
         return false;
       } finally {
         setLoading(false);
       }
     },
-    [options]
+    [] // login nunca muda — usa optionsRef para sempre ter callbacks atualizados
   );
 
   const clearError = useCallback(() => {

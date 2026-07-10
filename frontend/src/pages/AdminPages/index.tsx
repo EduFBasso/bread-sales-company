@@ -1,41 +1,36 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAdminCustomers } from '../../hooks/useAdminCustomers';
 import styles from './AdminPages.module.css';
 
 export function AdminPages() {
   const navigate = useNavigate();
   const [successMessage, setSuccessMessage] = useState('');
 
-  // Mock data - sem chamadas à API por enquanto
+  const { pendingCustomers, loading, error, fetchPendingCustomers, approveCustomer } =
+    useAdminCustomers({
+      onSuccess: (message) => {
+        setSuccessMessage(message);
+        setTimeout(() => {
+          setSuccessMessage('');
+        }, 3000);
+      },
+      onError: (err) => {
+        console.error('Admin action error:', err);
+      },
+    });
+
+  // Carregar clientes pendentes ao montar
+  useEffect(() => {
+    fetchPendingCustomers();
+  }, [fetchPendingCustomers]);
+
+  // KPIs com fallback para mock (enquanto não temos endpoints de stats)
   const mockKPIs = {
     totalCustomers: 42,
-    pendingCustomers: 3,
+    pendingCustomers: pendingCustomers.length,
     approvedCustomers: 39,
   };
-
-  const mockPendingCustomers = [
-    {
-      id: 1,
-      nickname: 'Padaria Central',
-      customer_type: 'PF',
-      phone: '(11) 98765-4321',
-      status: 'PENDENTE',
-    },
-    {
-      id: 2,
-      nickname: 'Supermercado 24h',
-      customer_type: 'PJ',
-      phone: '(11) 98888-8888',
-      status: 'PENDENTE',
-    },
-    {
-      id: 3,
-      nickname: 'Padaria do João',
-      customer_type: 'PF',
-      phone: '(11) 97777-7777',
-      status: 'PENDENTE',
-    },
-  ];
 
   const handleLogout = () => {
     localStorage.removeItem('bread_admin_token');
@@ -45,12 +40,8 @@ export function AdminPages() {
     navigate('/admin');
   };
 
-  const handleApprove = (nickname: string) => {
-    // Mock - sem chamada à API por enquanto
-    setSuccessMessage(`✅ Cliente "${nickname}" aprovado com sucesso!`);
-    setTimeout(() => {
-      setSuccessMessage('');
-    }, 3000);
+  const handleApprove = async (id: number, nickname: string) => {
+    await approveCustomer(id, nickname);
   };
 
   const adminUser = localStorage.getItem('bread_admin_user');
@@ -72,6 +63,7 @@ export function AdminPages() {
 
       <main className={styles.main}>
         {successMessage && <div className={styles.successAlert}>{successMessage}</div>}
+        {error && <div className={styles.errorAlert}>{error}</div>}
 
         {/* KPIs Section */}
         <section className={styles.kpisSection}>
@@ -93,7 +85,9 @@ export function AdminPages() {
         <section className={styles.tableSection}>
           <h2>Clientes Pendentes de Aprovação</h2>
 
-          {mockPendingCustomers.length === 0 ? (
+          {loading && <p className={styles.emptyState}>Carregando clientes...</p>}
+
+          {!loading && pendingCustomers.length === 0 ? (
             <p className={styles.emptyState}>Nenhum cliente pendente!</p>
           ) : (
             <div className={styles.tableWrapper}>
@@ -107,7 +101,7 @@ export function AdminPages() {
                   </tr>
                 </thead>
                 <tbody>
-                  {mockPendingCustomers.map((customer) => (
+                  {pendingCustomers.map((customer) => (
                     <tr key={customer.id}>
                       <td>{customer.nickname}</td>
                       <td>
@@ -117,7 +111,7 @@ export function AdminPages() {
                       <td>
                         <button
                           className={styles.approveButton}
-                          onClick={() => handleApprove(customer.nickname)}
+                          onClick={() => handleApprove(customer.id, customer.nickname)}
                         >
                           ✅ Aprovar
                         </button>

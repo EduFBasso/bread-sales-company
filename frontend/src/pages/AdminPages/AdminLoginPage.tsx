@@ -1,10 +1,8 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useAdminLogin } from '../../hooks/useAdminLogin';
 import styles from './AdminLoginPage.module.css';
 
 export function AdminLoginPage() {
-  const navigate = useNavigate();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
@@ -12,12 +10,13 @@ export function AdminLoginPage() {
   const { login, loading, error, clearError } = useAdminLogin({
     onSuccess: (response) => {
       setSuccessMessage(`✅ Bem-vindo, ${response.user.username}!`);
+      // Token já salvo no localStorage pelo hook — forçar navegação completa
       setTimeout(() => {
-        navigate('/admin');
+        window.location.replace('/admin');
       }, 1500);
     },
     onError: (err) => {
-      console.error('Login error:', err);
+      console.error('Erro no login:', err);
     },
   });
 

@@ -1,14 +1,14 @@
 """
 URLs para Customer
+
+IMPORTANTE: O CustomerViewSet é registrado no core/urls.py via DefaultRouter.
+Este arquivo mantém apenas padrão, mas as rotas CRUD são gerenciadas centralmente.
 """
 from django.urls import path
-from rest_framework.routers import DefaultRouter
-from .views import CustomerViewSet
 
 app_name = 'customers'
 
-# Router automático para CRUD
-router = DefaultRouter()
-router.register(r'', CustomerViewSet, basename='customer')
-
-urlpatterns = router.urls
+# Rotas customizadas específicas da app customers (se necessário no futuro)
+urlpatterns = [
+    # Todas as rotas CRUD são gerenciadas em core/urls.py
+]

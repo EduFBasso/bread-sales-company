@@ -24,6 +24,14 @@ class IsCustomerOrAdmin(permissions.BasePermission):
     Permitir acesso apenas se o usuário é o cliente ou admin.
     """
 
+    def has_permission(self, request, view):
+        # Admin tem acesso total
+        if request.user and request.user.is_staff:
+            return True
+
+        # Cliente autenticado pode fazer requisições a si mesmo
+        return request.user and request.user.is_authenticated
+
     def has_object_permission(self, request, view, obj):
         # Admin tem acesso total
         if request.user and request.user.is_staff:

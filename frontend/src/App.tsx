@@ -4,9 +4,9 @@ import { AdminLoginPage } from './pages/AdminPages/AdminLoginPage';
 import './App.css';
 
 function AdminRoute() {
-  const hasAdminToken = !!localStorage.getItem('bread_admin_token');
+  const hasToken = !!localStorage.getItem('bread_admin_token');
 
-  if (!hasAdminToken) {
+  if (!hasToken) {
     return <AdminLoginPage />;
   }
 
