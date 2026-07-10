@@ -7,10 +7,15 @@
   background: linear-gradient(135deg, #D4825C 0%, #c26e47 100%);
   color: #fff;
   padding: 2rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.headerContent {
+  max-width: 1200px;
+  margin: 0 auto;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .header h1 {
@@ -18,7 +23,7 @@
   font-size: 1.875rem;
 }
 
-.header button {
+.logoutButton {
   background: rgba(255, 255, 255, 0.2);
   color: #fff;
   border: none;
@@ -26,9 +31,10 @@
   border-radius: 0.375rem;
   cursor: pointer;
   font-weight: 600;
+  transition: background 0.3s ease;
 }
 
-.header button:hover {
+.logoutButton:hover {
   background: rgba(255, 255, 255, 0.3);
 }
 
@@ -38,8 +44,88 @@
   margin: 0 auto;
 }
 
+.welcomeSection {
+  background: #fff;
+  padding: 2rem;
+  border-radius: 0.5rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.welcomeSection h2 {
+  margin: 0 0 0.5rem 0;
+  color: #333;
+  font-size: 1.5rem;
+}
+
+.subtitle {
+  margin: 0;
+  color: #666;
+  font-size: 0.95rem;
+}
+
+.section {
+  background: #fff;
+  padding: 2rem;
+  border-radius: 0.5rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.section h3 {
+  margin: 0 0 1.5rem 0;
+  color: #333;
+  font-size: 1.25rem;
+  border-bottom: 2px solid #D4825C;
+  padding-bottom: 0.75rem;
+}
+
+.infoGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+}
+
+.infoItem {
+  display: flex;
+  flex-direction: column;
+}
+
+.infoItem label {
+  font-weight: 600;
+  color: #666;
+  font-size: 0.875rem;
+  margin-bottom: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.infoItem p {
+  margin: 0;
+  color: #333;
+  font-size: 1rem;
+  padding: 0.5rem 0;
+}
+
+.featureList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.featureList li {
+  padding: 1rem;
+  background: #f9f9f9;
+  border-left: 4px solid #D4825C;
+  border-radius: 0.25rem;
+  color: #333;
+}
+
 @media (max-width: 768px) {
-  .header {
+  .headerContent {
     flex-direction: column;
     gap: 1rem;
     text-align: center;
@@ -51,5 +137,13 @@
 
   .main {
     padding: 1rem;
+  }
+
+  .section {
+    padding: 1.5rem;
+  }
+
+  .infoGrid {
+    grid-template-columns: 1fr;
   }
 }

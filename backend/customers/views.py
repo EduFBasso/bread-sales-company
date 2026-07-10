@@ -12,7 +12,7 @@ from decimal import Decimal
 import uuid
 from django.utils import timezone
 
-from .models import Customer
+from .models import Customer, CustomerAuditLog
 from .serializers import CustomerSerializer
 from orders.models import Order
 from orders.serializers import OrderSerializer
@@ -22,6 +22,7 @@ from utils.permissions import IsCustomerOrAdmin
 from utils.pagination import StandardResultsSetPagination
 from utils.filters import CustomerFilterSet
 from utils.viacep import lookup_cep, ViaCEPError
+from utils.password_validator import validate_customer_password, validate_password_confirmation
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters
 from django.core.exceptions import ValidationError
@@ -159,11 +160,13 @@ class CustomerViewSet(viewsets.ModelViewSet):
         """
         POST /api/customers/{id}/approve/
         
-        Endpoint para admin aprovar um cliente pendente.
+        Endpoint para admin aprovar um cliente pendente com limite de crédito e senha inicial.
         
-        Headers:
+        Request:
         {
-            "Authorization": "Bearer {admin_token}"
+            "credit_limit": "1000.00",
+            "password": "Pwd123456",
+            "confirm_password": "Pwd123456"
         }
         
         Response (sucesso):
@@ -171,13 +174,11 @@ class CustomerViewSet(viewsets.ModelViewSet):
             "id": 1,
             "nickname": "Padaria Central",
             "status": "APROVADO",
+            "credit_limit": "1000.00",
+            "approved_by": "admin",
             "approved_at": "2024-01-15T10:30:00Z",
             ...
         }
-        
-        Response (erro):
-        - 403 Forbidden: Usuário não é admin
-        - 400 Bad Request: Cliente já foi aprovado
         """
         # Validar que é admin
         if not request.user.is_staff:
@@ -195,11 +196,72 @@ class CustomerViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        # Atualizar status
+        # Validar dados de entrada
+        credit_limit = request.data.get('credit_limit')
+        password = request.data.get('password')
+        confirm_password = request.data.get('confirm_password')
+        
+        if not credit_limit:
+            return Response(
+                {'detail': 'credit_limit é obrigatório'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        if not password or not confirm_password:
+            return Response(
+                {'detail': 'password e confirm_password são obrigatórios'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Validar senha
+        valid, msg = validate_customer_password(password)
+        if not valid:
+            return Response(
+                {'detail': f'Senha inválida: {msg}'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Validar confirmação
+        match, msg = validate_password_confirmation(password, confirm_password)
+        if not match:
+            return Response(
+                {'detail': msg},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Validar credit_limit é positivo
+        try:
+            limit_decimal = Decimal(credit_limit)
+            if limit_decimal <= 0:
+                return Response(
+                    {'detail': 'credit_limit deve ser maior que 0'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        except:
+            return Response(
+                {'detail': 'credit_limit deve ser um número válido'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Atualizar cliente
         customer.status = customer.ApprovalStatus.APPROVED
         customer.approved_by = request.user
         customer.approved_at = timezone.now()
+        customer.credit_limit = limit_decimal
+        customer.user.set_password(password)
+        customer.user.save()
         customer.save()
+        
+        # Registrar auditoria
+        CustomerAuditLog.objects.create(
+            customer=customer,
+            action='APPROVED',
+            admin_user=request.user,
+            details={
+                'credit_limit': str(limit_decimal),
+                'approved_by_user': request.user.username,
+            }
+        )
         
         # Serializar e retornar
         serializer = self.get_serializer(customer)
@@ -211,9 +273,11 @@ class CustomerViewSet(viewsets.ModelViewSet):
         POST /api/customers/{id}/block/
         
         Endpoint para admin bloquear um cliente (suspender acesso).
+        Requer confirmação de senha do admin para auditoria.
         
         Request:
         {
+            "password": "senha_do_admin",
             "reason": "Motivo do bloqueio (opcional)"
         }
         
@@ -222,6 +286,8 @@ class CustomerViewSet(viewsets.ModelViewSet):
             "id": 1,
             "nickname": "Padaria Central",
             "status": "BLOQUEADO",
+            "blocked_by": "admin",
+            "blocked_at": "2024-01-15T10:30:00Z",
             ...
         }
         """
@@ -232,15 +298,130 @@ class CustomerViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_403_FORBIDDEN
             )
         
+        # Validar password do admin
+        password = request.data.get('password')
+        if not password:
+            return Response(
+                {'detail': 'password (do admin) é obrigatória para confirmar bloqueio'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        if not request.user.check_password(password):
+            return Response(
+                {'detail': 'Senha do administrador incorreta'},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+        
         customer = self.get_object()
+        reason = request.data.get('reason', 'Sem motivo especificado')
         
         # Atualizar status
         customer.status = customer.ApprovalStatus.BLOCKED
+        customer.blocked_by = request.user
+        customer.blocked_at = timezone.now()
         customer.save()
+        
+        # Registrar auditoria
+        CustomerAuditLog.objects.create(
+            customer=customer,
+            action='BLOCKED',
+            admin_user=request.user,
+            details={
+                'reason': reason,
+                'blocked_by_user': request.user.username,
+            }
+        )
         
         # Serializar e retornar
         serializer = self.get_serializer(customer)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['post'], url_path='set-password', permission_classes=[IsAuthenticated])
+    def set_password(self, request, pk=None):
+        """
+        POST /api/customers/{id}/set-password/
+        
+        Endpoint para admin definir ou alterar senha de um cliente.
+        Requer senha do admin para confirmar.
+        
+        Request:
+        {
+            "password": "Nova_Senha123",
+            "confirm_password": "Nova_Senha123",
+            "admin_password": "senha_do_admin"
+        }
+        
+        Response:
+        {
+            "detail": "Senha definida com sucesso"
+        }
+        """
+        # Validar que é admin
+        if not request.user.is_staff:
+            return Response(
+                {'detail': 'Apenas administradores podem definir senhas'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        # Validar password do admin
+        admin_password = request.data.get('admin_password')
+        if not admin_password:
+            return Response(
+                {'detail': 'admin_password é obrigatória'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        if not request.user.check_password(admin_password):
+            return Response(
+                {'detail': 'Senha do administrador incorreta'},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+        
+        # Validar nova senha
+        password = request.data.get('password')
+        confirm_password = request.data.get('confirm_password')
+        
+        if not password or not confirm_password:
+            return Response(
+                {'detail': 'password e confirm_password são obrigatórios'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Validar senha
+        valid, msg = validate_customer_password(password)
+        if not valid:
+            return Response(
+                {'detail': f'Senha inválida: {msg}'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Validar confirmação
+        match, msg = validate_password_confirmation(password, confirm_password)
+        if not match:
+            return Response(
+                {'detail': msg},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Atualizar senha do cliente
+        customer = self.get_object()
+        customer.user.set_password(password)
+        customer.user.save()
+        
+        # Registrar auditoria
+        CustomerAuditLog.objects.create(
+            customer=customer,
+            action='PASSWORD_SET',
+            admin_user=request.user,
+            details={
+                'set_by_user': request.user.username,
+            }
+        )
+        
+        return Response(
+            {'detail': 'Senha definida com sucesso'},
+            status=status.HTTP_200_OK
+        )
 
 
 @api_view(['POST'])

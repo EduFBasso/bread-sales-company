@@ -5,4 +5,6 @@ export { useMaskInput } from './useMaskInput';
 export { useViaCEPLookup } from './useViaCEPLookup';
 export { useRegister } from './useRegister';
 export { useAdminLogin } from './useAdminLogin';
+export { useCustomerLogin } from './useCustomerLogin';
+export { useCustomerAuth } from './useCustomerAuth';
 export { useAdminCustomers } from './useAdminCustomers';
