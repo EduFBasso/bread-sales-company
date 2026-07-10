@@ -21,10 +21,7 @@ interface UseMaskInputResult {
  * const { formattedValue, onChangeHandler } = useMaskInput('cpf');
  * return <input value={formattedValue} onChange={onChangeHandler} />;
  */
-export function useMaskInput(
-  maskType: MaskType,
-  initialValue = ''
-): UseMaskInputResult {
+export function useMaskInput(maskType: MaskType, initialValue = ''): UseMaskInputResult {
   const pattern = maskPatterns[maskType];
   const [internalValue, setInternalValue] = useState(initialValue);
 
@@ -65,10 +62,10 @@ export function useMaskInput(
   const rawValue = internalValue.replace(/\D/g, '');
 
   return {
-    value: rawValue,  // Valor numérico puro para backend
+    value: rawValue, // Valor numérico puro para backend
     setValue,
     onChangeHandler,
-    formattedValue: internalValue,  // Valor formatado para exibir no input
+    formattedValue: internalValue, // Valor formatado para exibir no input
     inputMode: pattern.inputMode,
   };
 }

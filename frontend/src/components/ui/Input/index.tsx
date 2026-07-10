@@ -10,7 +10,7 @@ interface InputProps {
   required?: boolean;
   name?: string;
   id?: string;
-  mask?: MaskType;  // Tipo de máscara: 'cpf', 'cnpj', 'phone', 'zipCode', 'streetNumber'
+  mask?: MaskType; // Tipo de máscara: 'cpf', 'cnpj', 'phone', 'zipCode', 'streetNumber'
   inputMode?: 'numeric' | 'tel' | 'text' | 'email';
   pattern?: string;
   maxLength?: number;
@@ -47,7 +47,7 @@ export function Input({
       inputMode={inputMode}
       pattern={pattern}
       maxLength={maxLength}
-      data-mask={mask}  // Atributo para referência (opcional)
+      data-mask={mask} // Atributo para referência (opcional)
     />
   );
 }

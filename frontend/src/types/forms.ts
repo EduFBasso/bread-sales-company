@@ -8,8 +8,8 @@ export interface RegistrationFormData {
   name: string;
   nickname: string;
   customer_type: CustomerType;
-  cpf?: string;           // Para PF
-  cnpj?: string;          // Para PJ
+  cpf?: string; // Para PF
+  cnpj?: string; // Para PJ
   phone: string;
   zip_code: string;
   street: string;
@@ -17,8 +17,8 @@ export interface RegistrationFormData {
   neighborhood: string;
   city: string;
   state: string;
-  complement?: string;    // Opcional: apto, sala, etc
-  company_name?: string;  // Para PJ
+  complement?: string; // Opcional: apto, sala, etc
+  company_name?: string; // Para PJ
 }
 
 export interface FormErrors {

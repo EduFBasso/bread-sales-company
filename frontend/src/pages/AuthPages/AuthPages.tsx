@@ -49,17 +49,9 @@ export function RegisterPage() {
         <h1 className={styles.title}>🥖 Registrar Novo Cliente</h1>
         <p className={styles.subtitle}>Preencha os dados para se cadastrar no sistema</p>
 
-        {error && (
-          <div className={styles.errorAlert}>
-            ❌ {error}
-          </div>
-        )}
+        {error && <div className={styles.errorAlert}>❌ {error}</div>}
 
-        <CustomerForm
-          onSubmit={handleRegisterSubmit}
-          isLoading={loading}
-          errors={formErrors}
-        />
+        <CustomerForm onSubmit={handleRegisterSubmit} isLoading={loading} errors={formErrors} />
 
         <button className={styles.backLink} onClick={handleGoHome}>
           ← Voltar para Home
@@ -71,9 +63,7 @@ export function RegisterPage() {
         <div className={styles.successContent}>
           <div className={styles.successIcon}>✅</div>
           <h2 className={styles.successTitle}>Cadastro Recebido!</h2>
-          <p className={styles.successMessage}>
-            Seu acesso está em análise pelo administrador.
-          </p>
+          <p className={styles.successMessage}>Seu acesso está em análise pelo administrador.</p>
           <p className={styles.successDetail}>
             Apelido cadastrado: <strong>{registeredNickname}</strong>
           </p>
@@ -81,10 +71,7 @@ export function RegisterPage() {
             Você será contatado em breve com sua senha de acesso.
           </p>
           <div className={styles.successActions}>
-            <Button
-              variant="primary"
-              onClick={handleCloseModal}
-            >
+            <Button variant="primary" onClick={handleCloseModal}>
               ✅ Ir para Home
             </Button>
           </div>
@@ -135,11 +122,7 @@ export function LoginPage() {
         <h1 className={styles.title}>🥖 Login</h1>
         <p className={styles.subtitle}>Acesse sua conta para fazer pedidos</p>
 
-        {error && (
-          <div className={styles.errorAlert}>
-            ❌ {error}
-          </div>
-        )}
+        {error && <div className={styles.errorAlert}>❌ {error}</div>}
 
         <form onSubmit={handleLogin} className={styles.form}>
           <div className={styles.formGroup}>
@@ -166,11 +149,7 @@ export function LoginPage() {
             />
           </div>
 
-          <Button
-            variant="primary"
-            type="submit"
-            disabled={isLoading}
-          >
+          <Button variant="primary" type="submit" disabled={isLoading}>
             {isLoading ? '⏳ Entrando...' : '🔓 Entrar'}
           </Button>
         </form>
@@ -192,9 +171,7 @@ export function PendingPage() {
             <Spinner />
           </div>
           <h1 className={styles.pendingTitle}>⏳ Aguardando Aprovação</h1>
-          <p className={styles.pendingMessage}>
-            Seu cadastro está em análise pelo administrador.
-          </p>
+          <p className={styles.pendingMessage}>Seu cadastro está em análise pelo administrador.</p>
           <p className={styles.pendingSubtext}>
             Você será notificado em breve quando sua conta for aprovada.
           </p>

@@ -1,17 +1,22 @@
 import { useCallback, useRef } from 'react';
 
 interface ViaCEPResponse {
-  logradouro: string;    // Rua
-  bairro: string;        // Bairro
-  localidade: string;    // Cidade
-  uf: string;            // Estado (UF)
+  logradouro: string; // Rua
+  bairro: string; // Bairro
+  localidade: string; // Cidade
+  uf: string; // Estado (UF)
   erro?: boolean;
 }
 
 interface UseViaCEPLookupOptions {
-  onSuccess?: (address: { street: string; neighborhood: string; city: string; state: string }) => void;
+  onSuccess?: (address: {
+    street: string;
+    neighborhood: string;
+    city: string;
+    state: string;
+  }) => void;
   onError?: (error: string) => void;
-  onAutoFocusField?: () => void;  // Chamado quando deve fazer auto-focus no campo "Número"
+  onAutoFocusField?: () => void; // Chamado quando deve fazer auto-focus no campo "Número"
 }
 
 /**
