@@ -8,11 +8,7 @@ interface DashboardPageProps {
   onSuccess?: (message: string) => void;
 }
 
-export function DashboardPage({
-  onNavigateToCustomers,
-  onError,
-  onSuccess,
-}: DashboardPageProps) {
+export function DashboardPage({ onNavigateToCustomers, onError, onSuccess }: DashboardPageProps) {
   const { stats, loading, error, fetchAdminStats } = useAdminCustomers({
     onError,
     onSuccess,
@@ -56,9 +52,7 @@ export function DashboardPage({
           title="Clique para ver todos os clientes"
         >
           <h3>👥 Total de Clientes</h3>
-          <p className={styles.kpiValue}>
-            {loading ? '...' : stats?.total_customers || 0}
-          </p>
+          <p className={styles.kpiValue}>{loading ? '...' : stats?.total_customers || 0}</p>
           <p className={styles.kpiHint}>Clique para listar</p>
         </button>
 
@@ -68,9 +62,7 @@ export function DashboardPage({
           title="Clique para ver pendentes"
         >
           <h3>⏳ Pendentes</h3>
-          <p className={styles.kpiValue}>
-            {loading ? '...' : stats?.pending_customers || 0}
-          </p>
+          <p className={styles.kpiValue}>{loading ? '...' : stats?.pending_customers || 0}</p>
           <p className={styles.kpiHint}>Clique para listar</p>
         </button>
 
@@ -80,9 +72,7 @@ export function DashboardPage({
           title="Clique para ver aprovados"
         >
           <h3>✅ Aprovados</h3>
-          <p className={styles.kpiValue}>
-            {loading ? '...' : stats?.approved_customers || 0}
-          </p>
+          <p className={styles.kpiValue}>{loading ? '...' : stats?.approved_customers || 0}</p>
           <p className={styles.kpiHint}>Clique para listar</p>
         </button>
       </section>

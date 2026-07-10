@@ -6,18 +6,13 @@ import { ProductsPage } from './ProductsPage';
 import styles from './AdminPages.module.css';
 
 export function AdminPages() {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'customers' | 'products'>(
-    'dashboard'
-  );
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'customers' | 'products'>('dashboard');
   const [customerFilter, setCustomerFilter] = useState<string | undefined>();
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
 
   const adminUser = localStorage.getItem('bread_admin_user');
-  const userName = useMemo(
-    () => (adminUser ? JSON.parse(adminUser).username : 'Admin'),
-    []
-  );
+  const userName = useMemo(() => (adminUser ? JSON.parse(adminUser).username : 'Admin'), []);
 
   const handleNavigateToCustomers = (filter?: string) => {
     setCustomerFilter(filter);
@@ -39,11 +34,7 @@ export function AdminPages() {
   };
 
   return (
-    <AdminLayout
-      activeTab={activeTab}
-      onTabChange={handleTabChange}
-      userName={userName}
-    >
+    <AdminLayout activeTab={activeTab} onTabChange={handleTabChange} userName={userName}>
       {errorMessage && <div className={styles.errorAlert}>{errorMessage}</div>}
       {successMessage && <div className={styles.successAlert}>{successMessage}</div>}
 

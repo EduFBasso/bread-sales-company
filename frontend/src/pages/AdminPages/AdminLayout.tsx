@@ -9,12 +9,7 @@ interface AdminLayoutProps {
   userName: string;
 }
 
-export function AdminLayout({
-  children,
-  activeTab,
-  onTabChange,
-  userName,
-}: AdminLayoutProps) {
+export function AdminLayout({ children, activeTab, onTabChange, userName }: AdminLayoutProps) {
   const navigate = useNavigate();
 
   const handleLogout = useCallback(() => {

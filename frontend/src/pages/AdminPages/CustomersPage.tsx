@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAdminCustomers } from '../../hooks/useAdminCustomers';
+import { CustomerDetailModal } from './CustomerDetailModal';
 import styles from './AdminPages.module.css';
 
 interface CustomersPageProps {
@@ -8,25 +9,17 @@ interface CustomersPageProps {
   onSuccess?: (message: string) => void;
 }
 
-export function CustomersPage({
-  initialFilter,
-  onError,
-  onSuccess,
-}: CustomersPageProps) {
-  const {
-    allCustomers,
-    loading,
-    error,
-    fetchAllCustomers,
-    approveCustomer,
-    blockCustomer,
-  } = useAdminCustomers({ onError, onSuccess });
+export function CustomersPage({ initialFilter, onError, onSuccess }: CustomersPageProps) {
+  const { allCustomers, loading, error, fetchAllCustomers, approveCustomer, blockCustomer } =
+    useAdminCustomers({ onError, onSuccess });
 
   const [activeSubTab, setActiveSubTab] = useState<'pending' | 'all'>(
     initialFilter === 'PENDENTE' ? 'pending' : 'all'
   );
   const [searchInput, setSearchInput] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
+  const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
     const status = activeSubTab === 'pending' ? 'PENDENTE' : undefined;
@@ -52,6 +45,21 @@ export function CustomersPage({
     if (result) {
       setSuccessMessage(`🚫 ${nickname} bloqueado!`);
     }
+  };
+
+  const handleOpenModal = (customerId: number) => {
+    setSelectedCustomerId(customerId);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedCustomerId(null);
+  };
+
+  const handleCustomerUpdated = () => {
+    const status = activeSubTab === 'pending' ? 'PENDENTE' : undefined;
+    fetchAllCustomers({ status, search: searchInput || undefined });
   };
 
   const displayedCustomers =
@@ -99,9 +107,7 @@ export function CustomersPage({
 
         {!loading && displayedCustomers.length === 0 ? (
           <p className={styles.emptyState}>
-            {activeSubTab === 'pending'
-              ? 'Nenhum cliente pendente!'
-              : 'Nenhum cliente encontrado!'}
+            {activeSubTab === 'pending' ? 'Nenhum cliente pendente!' : 'Nenhum cliente encontrado!'}
           </p>
         ) : (
           <div className={styles.tableWrapper}>
@@ -137,25 +143,33 @@ export function CustomersPage({
                     </td>
                     <td>R$ {customer.current_balance || '0.00'}</td>
                     <td>
-                      {customer.status === 'PENDENTE' && (
+                      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                         <button
-                          className={styles.approveButton}
-                          onClick={() => handleApprove(customer.id, customer.nickname)}
+                          className={styles.detailsButton}
+                          onClick={() => handleOpenModal(customer.id)}
                         >
-                          ✅ Aprovar
+                          📋 Detalhes
                         </button>
-                      )}
-                      {customer.status === 'APROVADO' && (
-                        <button
-                          className={styles.blockButton}
-                          onClick={() => handleBlock(customer.id, customer.nickname)}
-                        >
-                          🚫 Bloquear
-                        </button>
-                      )}
-                      {customer.status === 'BLOQUEADO' && (
-                        <span className={styles.actionDisabled}>Bloqueado</span>
-                      )}
+                        {customer.status === 'PENDENTE' && (
+                          <button
+                            className={styles.approveButton}
+                            onClick={() => handleApprove(customer.id, customer.nickname)}
+                          >
+                            ✅ Aprovar
+                          </button>
+                        )}
+                        {customer.status === 'APROVADO' && (
+                          <button
+                            className={styles.blockButton}
+                            onClick={() => handleBlock(customer.id, customer.nickname)}
+                          >
+                            🚫 Bloquear
+                          </button>
+                        )}
+                        {customer.status === 'BLOQUEADO' && (
+                          <span className={styles.actionDisabled}>Bloqueado</span>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -164,6 +178,13 @@ export function CustomersPage({
           </div>
         )}
       </section>
+
+      <CustomerDetailModal
+        customerId={selectedCustomerId}
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+        onCustomerUpdated={handleCustomerUpdated}
+      />
     </div>
   );
 }
