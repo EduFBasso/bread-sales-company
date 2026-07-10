@@ -1,6 +1,17 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { HomePage, RegisterPage, LoginPage, PendingPage, AdminPages, ClientPages } from './pages';
+import { AdminLoginPage } from './pages/AdminPages/AdminLoginPage';
 import './App.css';
+
+function AdminRoute() {
+  const hasAdminToken = !!localStorage.getItem('bread_admin_token');
+
+  if (!hasAdminToken) {
+    return <AdminLoginPage />;
+  }
+
+  return <AdminPages />;
+}
 
 export default function App() {
   return (
@@ -17,7 +28,7 @@ export default function App() {
         <Route path="/pending" element={<PendingPage />} />
 
         {/* Admin */}
-        <Route path="/admin" element={<AdminPages />} />
+        <Route path="/admin" element={<AdminRoute />} />
 
         {/* Cliente */}
         <Route path="/dashboard" element={<ClientPages />} />

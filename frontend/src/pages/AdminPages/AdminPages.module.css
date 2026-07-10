@@ -1,48 +1,217 @@
 .container {
   min-height: 100vh;
-  background: #f5f5f5;
+  background: linear-gradient(135deg, #f5e6d3 0%, #e8d4c0 100%);
 }
 
 .header {
-  background: linear-gradient(135deg, #D4825C 0%, #c26e47 100%);
-  color: #fff;
-  padding: 2rem;
+  background: linear-gradient(135deg, #d9825d 0%, #c97449 100%);
+  color: white;
+  padding: 1.5rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
+.headerLeft {
+  flex: 1;
+}
+
 .header h1 {
+  font-size: 2rem;
   margin: 0;
-  font-size: 1.875rem;
+  font-weight: 700;
 }
 
-.header button {
-  background: rgba(255, 255, 255, 0.2);
-  color: #fff;
-  border: none;
+.userName {
+  font-size: 0.875rem;
+  margin: 0.5rem 0 0 0;
+  opacity: 0.9;
+}
+
+.logoutButton {
   padding: 0.75rem 1.5rem;
-  border-radius: 0.375rem;
-  cursor: pointer;
+  background-color: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 2px solid white;
+  border-radius: 6px;
+  font-size: 1rem;
   font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
 
-.header button:hover {
-  background: rgba(255, 255, 255, 0.3);
+.logoutButton:hover {
+  background-color: rgba(255, 255, 255, 0.3);
+  transform: translateY(-2px);
+}
+
+.logoutButton:active {
+  transform: translateY(0);
 }
 
 .main {
-  padding: 2rem;
   max-width: 1200px;
   margin: 0 auto;
+  padding: 2rem 1rem;
 }
 
+.successAlert {
+  background-color: #efe;
+  border: 1px solid #4a4;
+  color: #040;
+  padding: 1rem;
+  border-radius: 6px;
+  margin-bottom: 2rem;
+  font-size: 0.95rem;
+  font-weight: 500;
+  text-align: center;
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* KPIs Section */
+.kpisSection {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 3rem;
+}
+
+.kpiCard {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  text-align: center;
+  transition: all 0.2s ease;
+}
+
+.kpiCard:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+
+.kpiCard h3 {
+  color: #666;
+  font-size: 0.875rem;
+  margin: 0 0 1rem 0;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.kpiValue {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #d9825d;
+  margin: 0;
+}
+
+/* Table Section */
+.tableSection {
+  background: white;
+  border-radius: 8px;
+  padding: 2rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.tableSection h2 {
+  margin-top: 0;
+  color: #333;
+  font-size: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.emptyState {
+  text-align: center;
+  color: #999;
+  padding: 2rem;
+  font-size: 0.95rem;
+}
+
+.tableWrapper {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+}
+
+.table thead {
+  background-color: #f9f9f9;
+  border-bottom: 2px solid #e0d5ca;
+}
+
+.table th {
+  padding: 1rem;
+  text-align: left;
+  font-weight: 600;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-size: 0.75rem;
+}
+
+.table td {
+  padding: 1rem;
+  border-bottom: 1px solid #f0f0f0;
+  color: #333;
+}
+
+.table tbody tr:hover {
+  background-color: #fafaf8;
+}
+
+.table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.approveButton {
+  padding: 0.5rem 1rem;
+  background-color: #4caf50;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.approveButton:hover {
+  background-color: #45a049;
+  transform: translateY(-2px);
+  box-shadow: 0 2px 8px rgba(76, 175, 80, 0.3);
+}
+
+.approveButton:active {
+  transform: translateY(0);
+}
+
+/* Mobile */
 @media (max-width: 768px) {
   .header {
     flex-direction: column;
+    align-items: flex-start;
     gap: 1rem;
-    text-align: center;
+  }
+
+  .logoutButton {
+    align-self: flex-end;
   }
 
   .header h1 {
@@ -51,5 +220,34 @@
 
   .main {
     padding: 1rem;
+  }
+
+  .kpisSection {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+
+  .tableSection {
+    padding: 1rem;
+  }
+
+  .tableWrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .table {
+    font-size: 0.85rem;
+  }
+
+  .table th,
+  .table td {
+    padding: 0.75rem 0.5rem;
+  }
+
+  .approveButton {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.75rem;
   }
 }

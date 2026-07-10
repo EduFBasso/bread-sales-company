@@ -5,6 +5,7 @@ interface InputProps {
   type?: string;
   placeholder?: string;
   value?: string;
+  defaultValue?: string;
   onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
   disabled?: boolean;
   required?: boolean;
@@ -21,6 +22,7 @@ export function Input({
   type = 'text',
   placeholder,
   value,
+  defaultValue,
   onChange,
   disabled = false,
   required = false,
@@ -39,6 +41,7 @@ export function Input({
       className={styles.input}
       placeholder={placeholder}
       value={value}
+      defaultValue={defaultValue}
       onChange={onChange}
       disabled={disabled}
       required={required}

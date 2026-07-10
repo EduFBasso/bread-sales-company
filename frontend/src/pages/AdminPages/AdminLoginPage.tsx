@@ -1,0 +1,95 @@
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAdminLogin } from '../../hooks/useAdminLogin';
+import styles from './AdminLoginPage.module.css';
+
+export function AdminLoginPage() {
+  const navigate = useNavigate();
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
+
+  const { login, loading, error, clearError } = useAdminLogin({
+    onSuccess: (response) => {
+      setSuccessMessage(`✅ Bem-vindo, ${response.user.username}!`);
+      setTimeout(() => {
+        navigate('/admin');
+      }, 1500);
+    },
+    onError: (err) => {
+      console.error('Login error:', err);
+    },
+  });
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    clearError();
+
+    if (!username.trim() || !password.trim()) {
+      return;
+    }
+
+    await login(username, password);
+  };
+
+  return (
+    <div className={styles.container}>
+      <div className={styles.formWrapper}>
+        <header className={styles.header}>
+          <h1>🛠️ Painel Admin</h1>
+          <p className={styles.subtitle}>Acesso Restrito</p>
+        </header>
+
+        <form className={styles.form} onSubmit={handleSubmit}>
+          {error && <div className={styles.errorAlert}>{error}</div>}
+
+          {successMessage && <div className={styles.successAlert}>{successMessage}</div>}
+
+          <div className={styles.formGroup}>
+            <label htmlFor="username">Usuário</label>
+            <input
+              id="username"
+              type="text"
+              placeholder="Digite seu usuário"
+              value={username}
+              onChange={(e) => {
+                setUsername(e.target.value);
+                clearError();
+              }}
+              disabled={loading}
+              autoComplete="username"
+            />
+          </div>
+
+          <div className={styles.formGroup}>
+            <label htmlFor="password">Senha</label>
+            <input
+              id="password"
+              type="password"
+              placeholder="Digite sua senha"
+              value={password}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                clearError();
+              }}
+              disabled={loading}
+              autoComplete="current-password"
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading || !username.trim() || !password.trim()}
+            className={styles.submitButton}
+          >
+            {loading ? '⏳ Aguarde...' : '🔐 Entrar como Dono'}
+          </button>
+        </form>
+
+        <footer className={styles.footer}>
+          <p>Sistema de Administração</p>
+        </footer>
+      </div>
+    </div>
+  );
+}

@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     'corsheaders',
     
     # Seus Apps Locais (Modularizados e em Inglês)
+    'accounts', # Autenticação de Admin (Owner/Manager)
     'customers', # Clientes e Autenticação
     'orders', # Pedidos e Produtos
     'ledger', # Fianceiro e controle de Saldo (Fiado)
