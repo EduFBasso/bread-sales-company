@@ -202,7 +202,240 @@
   transform: translateY(0);
 }
 
+.errorAlert {
+  background-color: #fee;
+  border: 1px solid #f44;
+  color: #400;
+  padding: 1rem;
+  border-radius: 6px;
+  margin-bottom: 2rem;
+  font-size: 0.95rem;
+  font-weight: 500;
+  text-align: center;
+  animation: slideDown 0.3s ease-out;
+}
+
+/* Navigation Tabs */
+.navTabs {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  border-bottom: 2px solid rgba(0, 0, 0, 0.1);
+  padding-bottom: 0;
+}
+
+.navTab {
+  padding: 0.75rem 1.5rem;
+  background: transparent;
+  border: none;
+  border-bottom: 3px solid transparent;
+  color: #666;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.navTab:hover {
+  color: #d9825d;
+}
+
+.navTab.active {
+  color: #d9825d;
+  border-bottom-color: #d9825d;
+}
+
+/* Sub-tabs for Customers */
+.subTabs {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid #e0e0e0;
+  padding-bottom: 1rem;
+}
+
+.subTab {
+  padding: 0.5rem 1rem;
+  background: transparent;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  color: #666;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.subTab:hover {
+  border-color: #d9825d;
+  color: #d9825d;
+  background-color: rgba(217, 130, 93, 0.05);
+}
+
+.subTab.active {
+  background-color: #d9825d;
+  color: white;
+  border-color: #d9825d;
+}
+
+/* Search Box */
+.searchBox {
+  margin-bottom: 1.5rem;
+}
+
+.searchInput {
+  width: 100%;
+  max-width: 400px;
+  padding: 0.75rem 1rem;
+  border: 2px solid #e0d5ca;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  transition: all 0.2s ease;
+}
+
+.searchInput:focus {
+  outline: none;
+  border-color: #d9825d;
+  box-shadow: 0 0 0 3px rgba(217, 130, 93, 0.1);
+}
+
+/* KPI Card Button (Clickable) */
+.kpiButton {
+  border: none;
+  background: white;
+  padding: 1.5rem;
+  cursor: pointer;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.kpiButton:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 6px 16px rgba(217, 130, 93, 0.2);
+}
+
+.kpiButton:active {
+  transform: translateY(-2px);
+}
+
+.kpiHint {
+  font-size: 0.75rem;
+  color: #999;
+  margin-top: 0.5rem;
+  font-weight: 400;
+  font-style: italic;
+}
+
+/* Balance Section */
+.balanceSection {
+  background: white;
+  border-radius: 8px;
+  padding: 2rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  margin-top: 2rem;
+}
+
+.balanceSection h2 {
+  margin-top: 0;
+  color: #333;
+  font-size: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.balanceCard {
+  background: linear-gradient(135deg, #d9825d 0%, #c97449 100%);
+  color: white;
+  padding: 2rem;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.balanceValue {
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.balanceLabel {
+  font-size: 0.95rem;
+  margin: 0.5rem 0 0 0;
+  opacity: 0.9;
+}
+
+/* Status Badge */
+.statusBadge {
+  display: inline-block;
+  padding: 0.4rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.statusBadge.status-pendente {
+  background-color: #fff3cd;
+  color: #856404;
+}
+
+.statusBadge.status-aprovado {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.statusBadge.status-bloqueado {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+/* Block Button */
+.blockButton {
+  padding: 0.5rem 1rem;
+  background-color: #f44336;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.blockButton:hover {
+  background-color: #da190b;
+  transform: translateY(-2px);
+  box-shadow: 0 2px 8px rgba(244, 67, 54, 0.3);
+}
+
+.blockButton:active {
+  transform: translateY(0);
+}
+
+/* Action Disabled */
+.actionDisabled {
+  padding: 0.5rem 1rem;
+  color: #999;
+  font-size: 0.875rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* Placeholder */
+.placeholder {
+  padding: 3rem 2rem;
+  text-align: center;
+  color: #999;
+}
+
+.placeholder p {
+  font-size: 0.95rem;
+  margin: 0.5rem 0;
+}
+
 /* Mobile */
+
 @media (max-width: 768px) {
   .header {
     flex-direction: column;

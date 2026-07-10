@@ -12,13 +12,15 @@ class CustomerFilterSet(FilterSet):
     Filtros para Customer:
     - nickname: busca por nome/apelido
     - customer_type: filtra por tipo (PF/PJ)
+    - status: filtra por status de aprovação (PENDENTE/APROVADO/BLOQUEADO)
     """
     nickname = CharFilter(field_name='nickname', lookup_expr='icontains')
     customer_type = CharFilter(field_name='customer_type', lookup_expr='exact')
+    status = CharFilter(field_name='status', lookup_expr='exact')
 
     class Meta:
         model = Customer
-        fields = ['customer_type']
+        fields = ['customer_type', 'status']
 
 
 class OrderFilterSet(FilterSet):

@@ -18,9 +18,9 @@ class CustomerSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Customer
-        # ATUALIZADO: Inclui os campos granulares de endereço padrão brasileiro
+        # ATUALIZADO: Inclui status e saldo atual
         fields = [
-            'id', 'user', 'customer_type', 'nickname', 
+            'id', 'user', 'customer_type', 'nickname', 'status',
             'company_name', 'cnpj_cpf', 'phone', 
             'zip_code', 'street', 'number', 'complement', 
             'neighborhood', 'city', 'state',

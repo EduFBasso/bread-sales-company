@@ -6,7 +6,23 @@ interface Customer {
   customer_type: string;
   phone: string;
   status: string;
-  created_at: string;
+  created_at?: string;
+  user?: {
+    id: number;
+    username: string;
+    email: string;
+  };
+  company_name?: string;
+  cnpj_cpf?: string;
+  current_balance?: string;
+}
+
+interface AdminStats {
+  total_customers: number;
+  pending_customers: number;
+  approved_customers: number;
+  balance_receivable: string;
+  currency: string;
 }
 
 interface UseAdminCustomersOptions {
@@ -16,6 +32,9 @@ interface UseAdminCustomersOptions {
 
 export function useAdminCustomers(options?: UseAdminCustomersOptions) {
   const [pendingCustomers, setPendingCustomers] = useState<Customer[]>([]);
+  const [allCustomers, setAllCustomers] = useState<Customer[]>([]);
+  const [customerDetail, setCustomerDetail] = useState<Customer | null>(null);
+  const [stats, setStats] = useState<AdminStats | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -25,22 +44,52 @@ export function useAdminCustomers(options?: UseAdminCustomersOptions) {
     optionsRef.current = options;
   });
 
+  const getAuthHeaders = () => {
+    const token = localStorage.getItem('bread_admin_token');
+    if (!token) throw new Error('Token de admin não encontrado');
+    return {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    };
+  };
+
+  // Fetch admin stats (KPIs reais)
+  const fetchAdminStats = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch('http://localhost:8000/api/admin/stats', {
+        method: 'GET',
+        headers: getAuthHeaders(),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Erro ao carregar estatísticas: ${response.status}`);
+      }
+
+      const data: AdminStats = await response.json();
+      setStats(data);
+      return data;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Erro ao carregar estatísticas';
+      setError(msg);
+      optionsRef.current?.onError?.(msg);
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Fetch clientes pendentes (legacy, mantido para compatibilidade)
   const fetchPendingCustomers = useCallback(async () => {
     setLoading(true);
     setError(null);
 
     try {
-      const token = localStorage.getItem('bread_admin_token');
-      if (!token) throw new Error('Token de admin não encontrado');
-
-      // Sem barra final — router Django configurado com trailing_slash=False
-      const response = await fetch('http://localhost:8000/api/customers', {
+      const response = await fetch('http://localhost:8000/api/customers?status=PENDENTE', {
         method: 'GET',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
-        },
+        headers: getAuthHeaders(),
       });
 
       if (!response.ok) {
@@ -50,8 +99,7 @@ export function useAdminCustomers(options?: UseAdminCustomersOptions) {
       }
 
       const data = await response.json();
-      const all: Customer[] = Array.isArray(data) ? data : data.results || [];
-      const pending = all.filter((c) => c.status === 'PENDENTE');
+      const pending: Customer[] = Array.isArray(data) ? data : data.results || [];
       setPendingCustomers(pending);
       return pending;
     } catch (err) {
@@ -62,21 +110,76 @@ export function useAdminCustomers(options?: UseAdminCustomersOptions) {
     } finally {
       setLoading(false);
     }
-  }, []); // [] estável — sem loop no useEffect
+  }, []);
+
+  // Fetch todos os clientes com filtro opcional (novo)
+  const fetchAllCustomers = useCallback(async (filters?: { status?: string; search?: string }) => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const params = new URLSearchParams();
+      if (filters?.status) params.append('status', filters.status);
+      if (filters?.search) params.append('nickname', filters.search);
+
+      const url = `http://localhost:8000/api/customers${params.toString() ? '?' + params.toString() : ''}`;
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: getAuthHeaders(),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Erro ao carregar clientes: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const customers: Customer[] = Array.isArray(data) ? data : data.results || [];
+      setAllCustomers(customers);
+      return customers;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Erro ao carregar clientes';
+      setError(msg);
+      optionsRef.current?.onError?.(msg);
+      return [];
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Fetch detalhe de um cliente (novo)
+  const fetchCustomerDetail = useCallback(async (customerId: number) => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch(`http://localhost:8000/api/customers/${customerId}`, {
+        method: 'GET',
+        headers: getAuthHeaders(),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Erro ao carregar detalhe do cliente: ${response.status}`);
+      }
+
+      const customer: Customer = await response.json();
+      setCustomerDetail(customer);
+      return customer;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Erro ao carregar detalhe';
+      setError(msg);
+      optionsRef.current?.onError?.(msg);
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   const approveCustomer = useCallback(async (customerId: number, nickname: string) => {
     setError(null);
     try {
-      const token = localStorage.getItem('bread_admin_token');
-      if (!token) throw new Error('Token de admin não encontrado');
-
-      // Sem barra final — trailing_slash=False
       const response = await fetch(`http://localhost:8000/api/customers/${customerId}/approve`, {
         method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
+        headers: getAuthHeaders(),
       });
 
       if (!response.ok) {
@@ -86,6 +189,9 @@ export function useAdminCustomers(options?: UseAdminCustomersOptions) {
 
       const result = await response.json();
       setPendingCustomers((prev) => prev.filter((c) => c.id !== customerId));
+      setAllCustomers((prev) =>
+        prev.map((c) => (c.id === customerId ? { ...c, status: 'APROVADO' } : c))
+      );
       optionsRef.current?.onSuccess?.(`✅ Cliente "${nickname}" aprovado com sucesso!`);
       return result;
     } catch (err) {
@@ -94,9 +200,53 @@ export function useAdminCustomers(options?: UseAdminCustomersOptions) {
       optionsRef.current?.onError?.(msg);
       return null;
     }
-  }, []); // [] estável
+  }, []);
+
+  // Bloquear cliente (novo)
+  const blockCustomer = useCallback(async (customerId: number, nickname: string) => {
+    setError(null);
+    try {
+      const response = await fetch(`http://localhost:8000/api/customers/${customerId}/block`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.detail || `Erro ao bloquear cliente: ${response.status}`);
+      }
+
+      const result = await response.json();
+      setAllCustomers((prev) =>
+        prev.map((c) => (c.id === customerId ? { ...c, status: 'BLOQUEADO' } : c))
+      );
+      optionsRef.current?.onSuccess?.(`🚫 Cliente "${nickname}" bloqueado com sucesso!`);
+      return result;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Erro ao bloquear cliente';
+      setError(msg);
+      optionsRef.current?.onError?.(msg);
+      return null;
+    }
+  }, []);
 
   const clearError = useCallback(() => setError(null), []);
 
-  return { pendingCustomers, loading, error, fetchPendingCustomers, approveCustomer, clearError };
+  return {
+    // Estados
+    pendingCustomers,
+    allCustomers,
+    customerDetail,
+    stats,
+    loading,
+    error,
+    // Métodos
+    fetchAdminStats,
+    fetchPendingCustomers,
+    fetchAllCustomers,
+    fetchCustomerDetail,
+    approveCustomer,
+    blockCustomer,
+    clearError,
+  };
 }

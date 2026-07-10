@@ -1,10 +1,14 @@
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
 from .serializers import AdminLoginSerializer, UserRoleSerializer
 from .models import UserRole
+from customers.models import Customer
+from ledger.models import Transaction
+from django.db.models import Sum
+from decimal import Decimal
 
 
 @api_view(['POST'])
@@ -67,3 +71,64 @@ def admin_login(request):
         }, status=status.HTTP_200_OK)
     
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def admin_stats(request):
+    """
+    GET /api/admin/stats/
+    
+    Retorna KPIs do painel admin (apenas para usuários autenticados como staff).
+    
+    Response:
+    {
+        "total_customers": 42,
+        "pending_customers": 3,
+        "approved_customers": 39,
+        "balance_receivable": "1234.56",
+        "currency": "BRL"
+    }
+    
+    Permissions:
+    - Requer token JWT válido
+    - Validação adicional: se for customer (não staff), retorna 403
+    
+    Error:
+    - 401: Token inválido ou expirado
+    - 403: Usuário não é administrador (staff)
+    """
+    # Validar que é admin/staff
+    if not request.user.is_staff:
+        return Response(
+            {'detail': 'Apenas administradores podem acessar estatísticas'},
+            status=status.HTTP_403_FORBIDDEN
+        )
+    
+    # Contar clientes por status
+    total_customers = Customer.objects.count()
+    pending_customers = Customer.objects.filter(
+        status=Customer.ApprovalStatus.PENDING
+    ).count()
+    approved_customers = Customer.objects.filter(
+        status=Customer.ApprovalStatus.APPROVED
+    ).count()
+    
+    # Calcular saldo a receber: DEBIT - CREDIT
+    total_debit = Transaction.objects.filter(
+        transaction_type=Transaction.TransactionType.DEBIT
+    ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+    
+    total_credit = Transaction.objects.filter(
+        transaction_type=Transaction.TransactionType.CREDIT
+    ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+    
+    balance_receivable = total_debit - total_credit
+    
+    return Response({
+        'total_customers': total_customers,
+        'pending_customers': pending_customers,
+        'approved_customers': approved_customers,
+        'balance_receivable': str(balance_receivable),
+        'currency': 'BRL'
+    }, status=status.HTTP_200_OK)

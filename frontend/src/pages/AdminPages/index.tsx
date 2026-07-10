@@ -1,129 +1,69 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAdminCustomers } from '../../hooks/useAdminCustomers';
+import { useState, useMemo } from 'react';
+import { AdminLayout } from './AdminLayout';
+import { DashboardPage } from './DashboardPage';
+import { CustomersPage } from './CustomersPage';
+import { ProductsPage } from './ProductsPage';
 import styles from './AdminPages.module.css';
 
 export function AdminPages() {
-  const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'customers' | 'products'>(
+    'dashboard'
+  );
+  const [customerFilter, setCustomerFilter] = useState<string | undefined>();
+  const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
 
-  const { pendingCustomers, loading, error, fetchPendingCustomers, approveCustomer } =
-    useAdminCustomers({
-      onSuccess: (message) => {
-        setSuccessMessage(message);
-        setTimeout(() => {
-          setSuccessMessage('');
-        }, 3000);
-      },
-      onError: (err) => {
-        console.error('Admin action error:', err);
-      },
-    });
-
-  // Carregar clientes pendentes ao montar
-  useEffect(() => {
-    fetchPendingCustomers();
-  }, [fetchPendingCustomers]);
-
-  // KPIs com fallback para mock (enquanto não temos endpoints de stats)
-  const mockKPIs = {
-    totalCustomers: 42,
-    pendingCustomers: pendingCustomers.length,
-    approvedCustomers: 39,
-  };
-
-  const handleLogout = () => {
-    localStorage.removeItem('bread_admin_token');
-    localStorage.removeItem('bread_admin_refresh');
-    localStorage.removeItem('bread_admin_role');
-    localStorage.removeItem('bread_admin_user');
-    navigate('/admin');
-  };
-
-  const handleApprove = async (id: number, nickname: string) => {
-    await approveCustomer(id, nickname);
-  };
-
   const adminUser = localStorage.getItem('bread_admin_user');
-  const userName = adminUser ? JSON.parse(adminUser).username : 'Admin';
+  const userName = useMemo(
+    () => (adminUser ? JSON.parse(adminUser).username : 'Admin'),
+    []
+  );
+
+  const handleNavigateToCustomers = (filter?: string) => {
+    setCustomerFilter(filter);
+    setActiveTab('customers');
+  };
+
+  const handleTabChange = (tab: 'dashboard' | 'customers' | 'products') => {
+    setActiveTab(tab);
+  };
+
+  const handleError = (error: string) => {
+    setErrorMessage(error);
+    setTimeout(() => setErrorMessage(''), 3000);
+  };
+
+  const handleSuccess = (message: string) => {
+    setSuccessMessage(message);
+    setTimeout(() => setSuccessMessage(''), 3000);
+  };
 
   return (
-    <div className={styles.container}>
-      <header className={styles.header}>
-        <div className={styles.headerLeft}>
-          <h1>🛠️ Painel Admin</h1>
-          <p className={styles.userName}>
-            Olá, <strong>{userName}</strong>
-          </p>
-        </div>
-        <button className={styles.logoutButton} onClick={handleLogout}>
-          🚪 Sair
-        </button>
-      </header>
+    <AdminLayout
+      activeTab={activeTab}
+      onTabChange={handleTabChange}
+      userName={userName}
+    >
+      {errorMessage && <div className={styles.errorAlert}>{errorMessage}</div>}
+      {successMessage && <div className={styles.successAlert}>{successMessage}</div>}
 
-      <main className={styles.main}>
-        {successMessage && <div className={styles.successAlert}>{successMessage}</div>}
-        {error && <div className={styles.errorAlert}>{error}</div>}
+      {activeTab === 'dashboard' && (
+        <DashboardPage
+          onNavigateToCustomers={handleNavigateToCustomers}
+          onError={handleError}
+          onSuccess={handleSuccess}
+        />
+      )}
 
-        {/* KPIs Section */}
-        <section className={styles.kpisSection}>
-          <div className={styles.kpiCard}>
-            <h3>👥 Total de Clientes</h3>
-            <p className={styles.kpiValue}>{mockKPIs.totalCustomers}</p>
-          </div>
-          <div className={styles.kpiCard}>
-            <h3>⏳ Pendentes</h3>
-            <p className={styles.kpiValue}>{mockKPIs.pendingCustomers}</p>
-          </div>
-          <div className={styles.kpiCard}>
-            <h3>✅ Aprovados</h3>
-            <p className={styles.kpiValue}>{mockKPIs.approvedCustomers}</p>
-          </div>
-        </section>
+      {activeTab === 'customers' && (
+        <CustomersPage
+          initialFilter={customerFilter}
+          onError={handleError}
+          onSuccess={handleSuccess}
+        />
+      )}
 
-        {/* Pending Customers Section */}
-        <section className={styles.tableSection}>
-          <h2>Clientes Pendentes de Aprovação</h2>
-
-          {loading && <p className={styles.emptyState}>Carregando clientes...</p>}
-
-          {!loading && pendingCustomers.length === 0 ? (
-            <p className={styles.emptyState}>Nenhum cliente pendente!</p>
-          ) : (
-            <div className={styles.tableWrapper}>
-              <table className={styles.table}>
-                <thead>
-                  <tr>
-                    <th>Apelido</th>
-                    <th>Tipo</th>
-                    <th>Telefone</th>
-                    <th>Ação</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {pendingCustomers.map((customer) => (
-                    <tr key={customer.id}>
-                      <td>{customer.nickname}</td>
-                      <td>
-                        {customer.customer_type === 'PF' ? 'Pessoa Física' : 'Pessoa Jurídica'}
-                      </td>
-                      <td>{customer.phone}</td>
-                      <td>
-                        <button
-                          className={styles.approveButton}
-                          onClick={() => handleApprove(customer.id, customer.nickname)}
-                        >
-                          ✅ Aprovar
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
-      </main>
-    </div>
+      {activeTab === 'products' && <ProductsPage />}
+    </AdminLayout>
   );
 }
