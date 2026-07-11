@@ -124,6 +124,35 @@
   color: #333;
 }
 
+.newOrderButton {
+  margin: 2rem 0;
+  display: flex;
+  justify-content: center;
+}
+
+.primaryButton {
+  padding: 1rem 2rem;
+  background-color: #D4825C;
+  color: #fff;
+  border: none;
+  border-radius: 0.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+  box-shadow: 0 2px 8px rgba(212, 130, 92, 0.3);
+}
+
+.primaryButton:hover {
+  background-color: #c26f47;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(212, 130, 92, 0.4);
+}
+
+.primaryButton:active {
+  transform: translateY(0);
+}
+
 @media (max-width: 768px) {
   .headerContent {
     flex-direction: column;

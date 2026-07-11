@@ -168,8 +168,12 @@ SIMPLE_JWT = {
 CORS_ALLOWED_ORIGINS = [
     'http://localhost:3000',
     'http://localhost:5173',  # Vite default
+    'http://localhost:5174',  # Vite fallback
+    'http://localhost:5175',  # Vite fallback
     'http://127.0.0.1:3000',
     'http://127.0.0.1:5173',
+    'http://127.0.0.1:5174',
+    'http://127.0.0.1:5175',
 ]
 
 # drf-spectacular (Swagger) Configuration

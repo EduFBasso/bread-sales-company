@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useCustomerAuth } from './useCustomerAuth';
 
 export interface OrderItem {
@@ -14,7 +14,7 @@ export interface Order {
   id: number;
   order_number: string;
   customer_id: number;
-  status: 'PENDENTE' | 'CONFIRMADO' | 'ENTREGUE' | 'CANCELADO';
+  status: 'PENDING' | 'CONFIRMED' | 'DELIVERED' | 'CANCELLED';
   order_date: string;
   total_value: string;
   delivery_date: string | null;
@@ -28,13 +28,13 @@ export function useCustomerOrders() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const callbackRef = useRef(() => {
-    const fetchOrders = async () => {
-      if (!isAuthenticated || !token) {
-        setLoading(false);
-        return;
-      }
+  useEffect(() => {
+    if (!isAuthenticated || !token) {
+      setLoading(false);
+      return;
+    }
 
+    const fetchOrders = async () => {
       try {
         setLoading(true);
         setError(null);
@@ -42,7 +42,7 @@ export function useCustomerOrders() {
         const response = await fetch('http://localhost:8000/api/customers/orders/', {
           method: 'GET',
           headers: {
-            'Authorization': `Bearer ${token}`,
+            Authorization: `Bearer ${token}`,
             'Content-Type': 'application/json',
           },
         });
@@ -66,20 +66,11 @@ export function useCustomerOrders() {
     };
 
     fetchOrders();
-  });
-
-  useEffect(() => {
-    callbackRef.current();
-  }, [isAuthenticated, token]);
-
-  const refreshOrders = () => {
-    callbackRef.current();
-  };
+  }, [token, isAuthenticated]);
 
   return {
     orders,
     loading,
     error,
-    refreshOrders,
   };
 }

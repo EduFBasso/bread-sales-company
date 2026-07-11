@@ -51,11 +51,11 @@ export function TransactionHistory() {
   };
 
   const getTransactionIcon = (type: string) => {
-    return type === 'CREDITO' ? '➕' : '➖';
+    return type === 'CREDIT' ? '➕' : '➖';
   };
 
   const getTransactionColor = (type: string) => {
-    return type === 'CREDITO' ? styles.credit : styles.debit;
+    return type === 'CREDIT' ? styles.credit : styles.debit;
   };
 
   return (
@@ -75,8 +75,8 @@ export function TransactionHistory() {
 
         <div className={styles.tableBody}>
           {transactions.map((transaction) => (
-            <div 
-              key={transaction.id} 
+            <div
+              key={transaction.id}
               className={`${styles.row} ${getTransactionColor(transaction.transaction_type)}`}
             >
               <div className={styles.colDate}>
@@ -93,11 +93,14 @@ export function TransactionHistory() {
               <div className={styles.colType}>
                 <span className={styles.typeBadge}>
                   {getTransactionIcon(transaction.transaction_type)}
-                  {transaction.transaction_type === 'CREDITO' ? 'Crédito' : 'Débito'}
+                  {transaction.transaction_type === 'CREDIT' ? 'Crédito' : 'Débito'}
                 </span>
               </div>
-              <div className={`${styles.colAmount} ${styles[transaction.transaction_type.toLowerCase()]}`}>
-                {transaction.transaction_type === 'CREDITO' ? '+' : '-'}R$ {parseFloat(transaction.amount).toFixed(2)}
+              <div
+                className={`${styles.colAmount} ${styles[transaction.transaction_type.toLowerCase()]}`}
+              >
+                {transaction.transaction_type === 'CREDIT' ? '+' : '-'}R${' '}
+                {parseFloat(transaction.amount).toFixed(2)}
               </div>
             </div>
           ))}

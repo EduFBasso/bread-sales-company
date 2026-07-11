@@ -15,7 +15,7 @@ from django.utils import timezone
 from .models import Customer, CustomerAuditLog
 from .serializers import CustomerSerializer
 from orders.models import Order
-from orders.serializers import OrderSerializer
+from orders.serializers import OrderSerializer, OrderCreateSerializer
 from ledger.models import Transaction
 from ledger.serializers import TransactionSerializer
 from utils.permissions import IsCustomerOrAdmin
@@ -768,3 +768,266 @@ def pending_customers(request):
         'count': len(serializer.data),
         'results': serializer.data
     })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def customer_orders_list(request):
+    """
+    GET /api/customers/orders/
+    
+    Endpoint para cliente autenticado listar seus próprios pedidos.
+    Alternativa mais simples que GET /api/customers/{id}/orders/
+    
+    Headers:
+    {
+        "Authorization": "Bearer {customer_token}"
+    }
+    
+    Query Parameters:
+    - ?status=PENDING
+    - ?status=CONFIRMED
+    - ?status=DELIVERED
+    - ?status=CANCELLED
+    - ?page=1&page_size=10
+    
+    Response:
+    {
+        "count": 5,
+        "next": "http://localhost:8000/api/customers/orders/?page=2",
+        "previous": null,
+        "results": [
+            {
+                "id": 1,
+                "order_number": "ORD-001",
+                "customer_id": 1,
+                "status": "PENDING",
+                "order_date": "2024-01-15T10:30:00Z",
+                "total_value": "150.00",
+                "delivery_date": "2024-01-18T14:00:00Z",
+                "items": [
+                    {
+                        "id": 1,
+                        "product_id": 5,
+                        "product_name": "Pão Francês",
+                        "quantity": 10,
+                        "unit_price": "15.00",
+                        "subtotal": "150.00"
+                    }
+                ],
+                ...
+            }
+        ]
+    }
+    """
+    try:
+        # Buscar customer do usuário autenticado
+        try:
+            customer = request.user.customer_profile
+        except Customer.DoesNotExist:
+            return Response(
+                {'detail': 'Cliente não encontrado para este usuário'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # Buscar pedidos do cliente
+        orders = customer.orders.all().order_by('-created_at')
+        
+        # Filtrar por status se fornecido
+        status_filter = request.query_params.get('status')
+        if status_filter:
+            orders = orders.filter(status=status_filter.upper())
+        
+        # Aplicar paginação
+        from rest_framework.pagination import PageNumberPagination
+        paginator = PageNumberPagination()
+        paginator.page_size = request.query_params.get('page_size', 10)
+        page = paginator.paginate_queryset(orders, request)
+        
+        if page is not None:
+            serializer = OrderSerializer(page, many=True)
+            return paginator.get_paginated_response(serializer.data)
+        
+        serializer = OrderSerializer(orders, many=True)
+        return Response({
+            'count': len(serializer.data),
+            'results': serializer.data
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        return Response(
+            {'detail': str(e)},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def customer_transactions_list(request):
+    """
+    GET /api/customers/transactions/
+    
+    Endpoint para cliente autenticado listar seu histórico de transações/pagamentos.
+    Alternativa mais simples que GET /api/customers/{id}/transactions/
+    
+    Headers:
+    {
+        "Authorization": "Bearer {customer_token}"
+    }
+    
+    Query Parameters:
+    - ?transaction_type=CREDIT
+    - ?transaction_type=DEBIT
+    - ?page=1&page_size=10
+    
+    Response:
+    {
+        "count": 10,
+        "next": "http://localhost:8000/api/customers/transactions/?page=2",
+        "previous": null,
+        "results": [
+            {
+                "id": 1,
+                "customer_id": 1,
+                "transaction_type": "DEBIT",
+                "amount": "150.00",
+                "description": "Pagamento do Pedido ORD-001",
+                "reference_order_id": 1,
+                "transaction_date": "2024-01-15T10:30:00Z",
+                "created_at": "2024-01-15T10:30:00Z"
+            }
+        ]
+    }
+    """
+    try:
+        # Buscar customer do usuário autenticado
+        try:
+            customer = request.user.customer_profile
+        except Customer.DoesNotExist:
+            return Response(
+                {'detail': 'Cliente não encontrado para este usuário'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # Buscar transações do cliente
+        transactions = customer.transactions.all().order_by('-created_at')
+        
+        # Filtrar por tipo se fornecido
+        transaction_type_filter = request.query_params.get('transaction_type')
+        if transaction_type_filter:
+            transactions = transactions.filter(transaction_type=transaction_type_filter.upper())
+        
+        # Aplicar paginação
+        from rest_framework.pagination import PageNumberPagination
+        paginator = PageNumberPagination()
+        paginator.page_size = request.query_params.get('page_size', 10)
+        page = paginator.paginate_queryset(transactions, request)
+        
+        if page is not None:
+            serializer = TransactionSerializer(page, many=True)
+            return paginator.get_paginated_response(serializer.data)
+        
+        serializer = TransactionSerializer(transactions, many=True)
+        return Response({
+            'count': len(serializer.data),
+            'results': serializer.data
+        }, status=status.HTTP_200_OK)
+        
+    except Exception as e:
+        return Response(
+            {'detail': str(e)},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def customer_create_order(request):
+    """
+    POST /api/customers/orders/create/
+    
+    Endpoint para cliente autenticado criar um novo pedido com items atomicamente.
+    
+    Headers:
+    {
+        "Authorization": "Bearer {customer_token}",
+        "Content-Type": "application/json"
+    }
+    
+    Request Body:
+    {
+        "delivery_date": "2024-01-20T14:00:00Z",
+        "payment_method": "CREDIT",
+        "notes": "Entregar na portaria",
+        "items": [
+            {
+                "product_id": 1,
+                "quantity": 10
+            },
+            {
+                "product_id": 2,
+                "quantity": 5
+            }
+        ],
+        "shipping_zip_code": "01310-100",
+        "shipping_street": "Avenida Paulista",
+        "shipping_number": "1000",
+        "shipping_neighborhood": "Bela Vista",
+        "shipping_city": "São Paulo",
+        "shipping_state": "SP"
+    }
+    
+    Response (sucesso):
+    {
+        "id": 1,
+        "order_number": "ORD-001",
+        "customer_id": 1,
+        "status": "PENDING",
+        "order_date": "2024-01-15T10:30:00Z",
+        "delivery_date": "2024-01-20T14:00:00Z",
+        "payment_method": "CREDIT",
+        "total_value": "150.00",
+        "items": [
+            {
+                "product_id": 1,
+                "product_name": "Pão Francês",
+                "quantity": 10,
+                "unit_price": "15.00",
+                "subtotal": "150.00"
+            }
+        ]
+    }
+    """
+    try:
+        # Buscar customer do usuário autenticado
+        try:
+            customer = request.user.customer_profile
+        except Customer.DoesNotExist:
+            return Response(
+                {'detail': 'Cliente não encontrado para este usuário'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # Validar dados de entrada
+        serializer = OrderCreateSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(
+                {'detail': 'Dados inválidos', 'errors': serializer.errors},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Criar o pedido (com items atomicamente)
+        order = serializer.save(customer=customer)
+        
+        # Retornar pedido criado com items
+        response_serializer = OrderSerializer(order)
+        return Response(
+            response_serializer.data,
+            status=status.HTTP_201_CREATED
+        )
+        
+    except Exception as e:
+        return Response(
+            {'detail': str(e)},
+            status=status.HTTP_400_BAD_REQUEST
+        )

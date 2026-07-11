@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { HomePage, RegisterPage, LoginPage, PendingPage, AdminPages, ClientPages } from './pages';
 import { AdminLoginPage } from './pages/AdminPages/AdminLoginPage';
 import { CustomerLoginPage } from './pages/ClientPages/CustomerLoginPage';
+import { CustomerCreateOrderPage } from './pages/ClientPages/CustomerCreateOrderPage';
 import './App.css';
 
 function AdminRoute() {
@@ -14,11 +15,15 @@ function AdminRoute() {
   return <AdminPages />;
 }
 
-function CustomerRoute() {
+function CustomerRoute({ page = 'dashboard' }: { page?: string } = {}) {
   const hasToken = !!localStorage.getItem('bread_customer_token');
 
   if (!hasToken) {
     return <CustomerLoginPage />;
+  }
+
+  if (page === 'create-order') {
+    return <CustomerCreateOrderPage />;
   }
 
   return <ClientPages />;
@@ -45,6 +50,7 @@ export default function App() {
         {/* Cliente */}
         <Route path="/dashboard" element={<ClientPages />} />
         <Route path="/customer/dashboard" element={<CustomerRoute />} />
+        <Route path="/customer/orders/create" element={<CustomerRoute page="create-order" />} />
 
         {/* Fallback */}
         <Route path="*" element={<Navigate to="/" replace />} />

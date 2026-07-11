@@ -1,0 +1,53 @@
+import { useState, useEffect } from 'react';
+
+export interface Product {
+  id: number;
+  name: string;
+  description: string;
+  price: string;
+  is_active: boolean;
+  created_at: string;
+}
+
+export function useProducts() {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const response = await fetch('http://localhost:8000/api/products/', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`Erro ao carregar produtos: ${response.status}`);
+        }
+
+        const data = await response.json();
+        setProducts(Array.isArray(data) ? data : data.results || []);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Erro ao carregar produtos';
+        setError(message);
+        console.error('Products fetch error:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProducts();
+  }, []);
+
+  return {
+    products,
+    loading,
+    error,
+  };
+}

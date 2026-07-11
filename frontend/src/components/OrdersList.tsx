@@ -42,11 +42,11 @@ export function OrdersList() {
 
   const getStatusClass = (status: string) => {
     switch (status) {
-      case 'ENTREGUE':
+      case 'DELIVERED':
         return styles.statusDelivered;
-      case 'CONFIRMADO':
+      case 'CONFIRMED':
         return styles.statusConfirmed;
-      case 'CANCELADO':
+      case 'CANCELLED':
         return styles.statusCancelled;
       default:
         return styles.statusPending;
@@ -55,11 +55,11 @@ export function OrdersList() {
 
   const getStatusLabel = (status: string) => {
     switch (status) {
-      case 'ENTREGUE':
+      case 'DELIVERED':
         return '✓ Entregue';
-      case 'CONFIRMADO':
+      case 'CONFIRMED':
         return '→ Confirmado';
-      case 'CANCELADO':
+      case 'CANCELLED':
         return '✕ Cancelado';
       default:
         return '⏳ Pendente';
@@ -102,22 +102,16 @@ export function OrdersList() {
                     </div>
                   ))}
                   {order.items.length > 2 && (
-                    <div className={styles.itemPreview}>
-                      • +{order.items.length - 2} mais
-                    </div>
+                    <div className={styles.itemPreview}>• +{order.items.length - 2} mais</div>
                   )}
                 </div>
               </div>
 
-              <div className={styles.amount}>
-                R$ {parseFloat(order.total_value).toFixed(2)}
-              </div>
+              <div className={styles.amount}>R$ {parseFloat(order.total_value).toFixed(2)}</div>
             </div>
 
             {order.delivery_date && (
-              <div className={styles.cardFooter}>
-                📅 Entrega: {formatDate(order.delivery_date)}
-              </div>
+              <div className={styles.cardFooter}>📅 Entrega: {formatDate(order.delivery_date)}</div>
             )}
           </div>
         ))}

@@ -63,6 +63,15 @@ export function ClientPages() {
         {/* Orders List Section */}
         <OrdersList />
 
+        <div className={styles.newOrderButton}>
+          <button
+            onClick={() => navigate('/customer/orders/create')}
+            className={styles.primaryButton}
+          >
+            🛒 Fazer Novo Pedido
+          </button>
+        </div>
+
         {/* Transaction History Section */}
         <TransactionHistory />
 

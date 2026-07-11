@@ -1,10 +1,10 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useCustomerAuth } from './useCustomerAuth';
 
 export interface Transaction {
   id: number;
   customer_id: number;
-  transaction_type: 'CREDITO' | 'DEBITO';
+  transaction_type: 'CREDIT' | 'DEBIT';
   amount: string;
   description: string;
   reference_order_id: number | null;
@@ -18,13 +18,13 @@ export function useCustomerTransactions() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const callbackRef = useRef(() => {
-    const fetchTransactions = async () => {
-      if (!isAuthenticated || !token) {
-        setLoading(false);
-        return;
-      }
+  useEffect(() => {
+    if (!isAuthenticated || !token) {
+      setLoading(false);
+      return;
+    }
 
+    const fetchTransactions = async () => {
       try {
         setLoading(true);
         setError(null);
@@ -32,7 +32,7 @@ export function useCustomerTransactions() {
         const response = await fetch('http://localhost:8000/api/customers/transactions/', {
           method: 'GET',
           headers: {
-            'Authorization': `Bearer ${token}`,
+            Authorization: `Bearer ${token}`,
             'Content-Type': 'application/json',
           },
         });
@@ -56,20 +56,11 @@ export function useCustomerTransactions() {
     };
 
     fetchTransactions();
-  });
-
-  useEffect(() => {
-    callbackRef.current();
-  }, [isAuthenticated, token]);
-
-  const refreshTransactions = () => {
-    callbackRef.current();
-  };
+  }, [token, isAuthenticated]);
 
   return {
     transactions,
     loading,
     error,
-    refreshTransactions,
   };
 }

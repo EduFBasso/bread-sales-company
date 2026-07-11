@@ -20,7 +20,11 @@ from rest_framework.permissions import AllowAny
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView, SpectacularRedocView
 
 # Import ViewSets
-from customers.views import CustomerViewSet, register_customer, login_customer, current_customer, lookup_cep_address, pending_customers
+from customers.views import (
+    CustomerViewSet, register_customer, login_customer, current_customer, 
+    lookup_cep_address, pending_customers, customer_orders_list, customer_transactions_list,
+    customer_create_order
+)
 from orders.views import OrderViewSet, OrderItemViewSet, ProductViewSet
 from ledger.views import TransactionViewSet
 from orders.serializers import ProductSerializer
@@ -84,6 +88,9 @@ urlpatterns = [
     path('api/customers/register/', register_customer, name='customer-register'),
     path('api/customers/login/', login_customer, name='customer-login'),
     path('api/customers/me/', current_customer, name='current-customer'),
+    path('api/customers/orders/', customer_orders_list, name='customer-orders'),
+    path('api/customers/orders/create/', customer_create_order, name='customer-create-order'),
+    path('api/customers/transactions/', customer_transactions_list, name='customer-transactions'),
     path('api/customers/pending/', pending_customers, name='pending-customers'),
     path('api/customers/lookup-cep/', lookup_cep_address, name='lookup-cep'),
     path('api/products-public/', products_public, name='products-public'),

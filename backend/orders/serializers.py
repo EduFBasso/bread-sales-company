@@ -9,10 +9,12 @@ class ProductSerializer(serializers.ModelSerializer):
 class OrderItemSerializer(serializers.ModelSerializer):
     # Mostra os detalhes legíveis do pão (nome, etc) na resposta da API
     product_details = ProductSerializer(source='product', read_only=True)
+    product_name = serializers.CharField(source='product.name', read_only=True)
+    product_id = serializers.IntegerField(source='product.id', read_only=True)
 
     class Meta:
         model = OrderItem
-        fields = ['id', 'product', 'product_details', 'quantity', 'unit_price', 'subtotal']
+        fields = ['id', 'product', 'product_id', 'product_name', 'product_details', 'quantity', 'unit_price', 'subtotal']
         # Bloqueia a edição manual de preços e subtotais, mantendo as automações ativas
         read_only_fields = ['unit_price', 'subtotal']
 
@@ -20,14 +22,22 @@ class OrderSerializer(serializers.ModelSerializer):
     # Faz o aninhamento dos itens do pedido (um para muitos)
     items = OrderItemSerializer(many=True, read_only=True)
     customer_nickname = serializers.CharField(source='customer.nickname', read_only=True)
+    customer_id = serializers.IntegerField(source='customer.id', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     payment_method_display = serializers.CharField(source='get_payment_method_display', read_only=True)
+    # Campos mapeados para o frontend
+    order_number = serializers.SerializerMethodField(read_only=True)
+    order_date = serializers.DateTimeField(source='created_at', read_only=True)
+    
+    def get_order_number(self, obj):
+        """Gera número de pedido formatado: ORD-001"""
+        return f"ORD-{obj.id:03d}"
 
     class Meta:
         model = Order
         fields = [
-            'id', 'customer', 'customer_nickname', 'status', 'status_display',
-            'delivery_date', 'payment_method', 'payment_method_display', 'notes', 
+            'id', 'order_number', 'customer', 'customer_id', 'customer_nickname', 'status', 'status_display',
+            'order_date', 'delivery_date', 'payment_method', 'payment_method_display', 'notes', 
             'shipping_zip_code', 'shipping_street', 'shipping_number', 
             'shipping_complement', 'shipping_neighborhood', 'shipping_city', 'shipping_state',
             'total_value', 'items', 'created_at', 'updated_at'
@@ -74,3 +84,70 @@ class OrderSerializer(serializers.ModelSerializer):
                 )
         
         return data
+
+
+class OrderItemCreateSerializer(serializers.Serializer):
+    """Serializer para criar OrderItem com product_id e quantidade"""
+    product_id = serializers.IntegerField()
+    quantity = serializers.IntegerField(min_value=1)
+
+    def validate_product_id(self, value):
+        """Verifica se o produto existe e está ativo"""
+        try:
+            product = Product.objects.get(id=value, is_active=True)
+        except Product.DoesNotExist:
+            raise serializers.ValidationError(f"Produto com ID {value} não encontrado ou inativo.")
+        return value
+
+
+class OrderCreateSerializer(serializers.ModelSerializer):
+    """Serializer para criar Order com items atomicamente"""
+    items = OrderItemCreateSerializer(many=True, required=True)
+    shipping_zip_code = serializers.CharField(required=False, allow_blank=True)
+    shipping_street = serializers.CharField(required=False, allow_blank=True)
+    shipping_number = serializers.CharField(required=False, allow_blank=True)
+    shipping_complement = serializers.CharField(required=False, allow_blank=True)
+    shipping_neighborhood = serializers.CharField(required=False, allow_blank=True)
+    shipping_city = serializers.CharField(required=False, allow_blank=True)
+    shipping_state = serializers.CharField(required=False, allow_blank=True)
+
+    class Meta:
+        model = Order
+        fields = [
+            'delivery_date', 'payment_method', 'notes',
+            'shipping_zip_code', 'shipping_street', 'shipping_number',
+            'shipping_complement', 'shipping_neighborhood', 'shipping_city', 'shipping_state',
+            'items'
+        ]
+
+    def validate_items(self, value):
+        """Valida que há pelo menos um item"""
+        if not value:
+            raise serializers.ValidationError("O pedido deve conter pelo menos um item.")
+        return value
+
+    def create(self, validated_data):
+        """Cria Order e OrderItems atomicamente"""
+        from django.db import transaction
+        
+        items_data = validated_data.pop('items')
+        
+        # Usar transação para garantir atomicidade
+        with transaction.atomic():
+            # Criar o pedido
+            order = Order.objects.create(**validated_data)
+            
+            # Adicionar items ao pedido
+            for item_data in items_data:
+                product = Product.objects.get(id=item_data['product_id'])
+                OrderItem.objects.create(
+                    order=order,
+                    product=product,
+                    quantity=item_data['quantity'],
+                    unit_price=product.price
+                )
+            
+            # Atualizar total_value
+            order.update_total_value()
+        
+        return order
