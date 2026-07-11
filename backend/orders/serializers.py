@@ -83,6 +83,24 @@ class OrderSerializer(serializers.ModelSerializer):
                     "ou voce deve fornecer um endereco alternativo de entrega."
                 )
         
+        # Validação de Crédito Disponível (Phase 7)
+        # Verifica se o cliente tem crédito disponível para fazer novos pedidos
+        if customer:
+            # Verifica se o cliente está aprovado
+            if customer.status != customer.ApprovalStatus.APPROVED:
+                raise serializers.ValidationError(
+                    f"Cliente não está aprovado para fazer pedidos. Status atual: {customer.get_status_display()}"
+                )
+            
+            # Verifica se tem crédito disponível
+            available_credit = customer.available_credit()
+            if available_credit <= 0:
+                current_balance = customer.get_balance()
+                raise serializers.ValidationError(
+                    f"Cliente sem crédito disponível. Limite: R$ {customer.credit_limit:.2f}, "
+                    f"Saldo: R$ {current_balance:.2f}, Disponível: R$ {available_credit:.2f}"
+                )
+        
         return data
 
 

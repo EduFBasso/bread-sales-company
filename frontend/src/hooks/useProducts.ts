@@ -14,34 +14,34 @@ export function useProducts() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        setLoading(true);
-        setError(null);
+  const fetchProducts = async () => {
+    try {
+      setLoading(true);
+      setError(null);
 
-        const response = await fetch('http://localhost:8000/api/products/', {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        });
+      const response = await fetch('http://localhost:8000/api/products/', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
 
-        if (!response.ok) {
-          throw new Error(`Erro ao carregar produtos: ${response.status}`);
-        }
-
-        const data = await response.json();
-        setProducts(Array.isArray(data) ? data : data.results || []);
-      } catch (err) {
-        const message = err instanceof Error ? err.message : 'Erro ao carregar produtos';
-        setError(message);
-        console.error('Products fetch error:', err);
-      } finally {
-        setLoading(false);
+      if (!response.ok) {
+        throw new Error(`Erro ao carregar produtos: ${response.status}`);
       }
-    };
 
+      const data = await response.json();
+      setProducts(Array.isArray(data) ? data : data.results || []);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Erro ao carregar produtos';
+      setError(message);
+      console.error('Products fetch error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchProducts();
   }, []);
 
@@ -49,5 +49,6 @@ export function useProducts() {
     products,
     loading,
     error,
+    refetch: fetchProducts,
   };
 }
