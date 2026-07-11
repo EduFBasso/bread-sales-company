@@ -13,3 +13,6 @@ export { useCustomerOrders } from './useCustomerOrders';
 export { useCustomerTransactions } from './useCustomerTransactions';
 export { useProducts } from './useProducts';
 export { useCreateOrder } from './useCreateOrder';
+export { useAdminOrders } from './useAdminOrders';
+export { useUpdateOrderStatus } from './useUpdateOrderStatus';
+export { useCancelOrder } from './useCancelOrder';

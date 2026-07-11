@@ -4,8 +4,8 @@ import styles from './AdminPages.module.css';
 
 interface AdminLayoutProps {
   children: React.ReactNode;
-  activeTab: 'dashboard' | 'customers' | 'products';
-  onTabChange: (tab: 'dashboard' | 'customers' | 'products') => void;
+  activeTab: 'dashboard' | 'customers' | 'products' | 'orders';
+  onTabChange: (tab: 'dashboard' | 'customers' | 'products' | 'orders') => void;
   userName: string;
 }
 
@@ -53,6 +53,12 @@ export function AdminLayout({ children, activeTab, onTabChange, userName }: Admi
           onClick={() => onTabChange('products')}
         >
           📦 Produtos
+        </button>
+        <button
+          className={`${styles.navTab} ${activeTab === 'orders' ? styles.active : ''}`}
+          onClick={() => onTabChange('orders')}
+        >
+          📋 Pedidos
         </button>
       </nav>
 

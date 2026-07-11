@@ -85,6 +85,7 @@ urlpatterns = [
     # API Routes
     path('api/', include(router.urls)),
     path('api/admin/', include('accounts.urls')),
+    path('api/admin/', include('customers.admin_urls')),
     path('api/customers/register/', register_customer, name='customer-register'),
     path('api/customers/login/', login_customer, name='customer-login'),
     path('api/customers/me/', current_customer, name='current-customer'),

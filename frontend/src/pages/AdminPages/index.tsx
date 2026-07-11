@@ -3,10 +3,13 @@ import { AdminLayout } from './AdminLayout';
 import { DashboardPage } from './DashboardPage';
 import { CustomersPage } from './CustomersPage';
 import { ProductsPage } from './ProductsPage';
+import { AdminOrdersPage } from './AdminOrdersPage';
 import styles from './AdminPages.module.css';
 
 export function AdminPages() {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'customers' | 'products'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'customers' | 'products' | 'orders'>(
+    'dashboard'
+  );
   const [customerFilter, setCustomerFilter] = useState<string | undefined>();
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
@@ -19,7 +22,7 @@ export function AdminPages() {
     setActiveTab('customers');
   };
 
-  const handleTabChange = (tab: 'dashboard' | 'customers' | 'products') => {
+  const handleTabChange = (tab: 'dashboard' | 'customers' | 'products' | 'orders') => {
     setActiveTab(tab);
   };
 
@@ -55,6 +58,8 @@ export function AdminPages() {
       )}
 
       {activeTab === 'products' && <ProductsPage />}
+
+      {activeTab === 'orders' && <AdminOrdersPage />}
     </AdminLayout>
   );
 }

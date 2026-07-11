@@ -56,6 +56,8 @@ class Order(models.Model):
     payment_method = models.CharField(max_length=20, choices=PAYMENT_CHOICES)
     notes = models.TextField(blank=True)
     total_value = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
+    cancellation_reason = models.TextField(blank=True, null=True, help_text="Motivo do cancelamento")
+    cancelled_at = models.DateTimeField(blank=True, null=True, help_text="Data/hora do cancelamento")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
