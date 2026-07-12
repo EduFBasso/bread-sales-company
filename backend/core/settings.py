@@ -174,6 +174,7 @@ CORS_ALLOWED_ORIGINS = [
     'http://127.0.0.1:5173',
     'http://127.0.0.1:5174',
     'http://127.0.0.1:5175',
+    'http://192.168.0.142:5173',  # iPhone na rede local
 ]
 
 # drf-spectacular (Swagger) Configuration

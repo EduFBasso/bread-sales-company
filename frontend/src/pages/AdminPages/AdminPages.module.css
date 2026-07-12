@@ -204,6 +204,7 @@
 
 .detailsButton {
   padding: 0.5rem 1rem;
+  min-width: 145px;
   background-color: #007bff;
   color: white;
   border: none;
@@ -222,6 +223,31 @@
 }
 
 .detailsButton:active {
+  transform: translateY(0);
+}
+
+.unblockButton {
+  flex: 1;
+  padding: 0.75rem 1.5rem;
+  min-width: 120px;
+  background-color: #757575;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.unblockButton:hover {
+  background-color: #616161;
+  transform: translateY(-2px);
+  box-shadow: 0 2px 8px rgba(97, 97, 97, 0.3);
+}
+
+.unblockButton:active {
   transform: translateY(0);
 }
 

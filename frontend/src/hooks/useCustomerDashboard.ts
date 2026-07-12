@@ -25,9 +25,9 @@ export function useCustomerDashboard() {
 
     try {
       // Parse customer data for balance info
-      const balance = parseFloat(customer.current_balance ?? '0') || 0;
-      const availableCredit = parseFloat(customer.available_credit ?? '0') || 0;
-      const creditLimit = parseFloat(customer.credit_limit ?? '0') || 0;
+      const balance = parseFloat(String(customer.current_balance ?? '0')) || 0;
+      const availableCredit = parseFloat(String(customer.available_credit ?? '0')) || 0;
+      const creditLimit = parseFloat(String(customer.credit_limit ?? '0')) || 0;
 
       // Prepare dashboard data
       const dashboardData: CustomerDashboardData = {

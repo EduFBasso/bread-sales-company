@@ -1,11 +1,12 @@
 import { useCallback, useRef } from 'react';
 
 interface ViaCEPResponse {
-  logradouro: string; // Rua
-  bairro: string; // Bairro
-  localidade: string; // Cidade
-  uf: string; // Estado (UF)
-  erro?: boolean;
+  street: string; // Rua
+  neighborhood: string; // Bairro
+  city: string; // Cidade
+  state: string; // Estado (UF)
+  zip_code: string; // CEP
+  erro?: boolean; // Erro na busca
 }
 
 interface UseViaCEPLookupOptions {
@@ -60,9 +61,13 @@ export function useViaCEPLookup(options: UseViaCEPLookupOptions = {}) {
       // Debounce 300ms antes de fazer a requisição
       debounceTimerRef.current = setTimeout(async () => {
         try {
-          const response = await fetch(
-            `http://localhost:8000/api/customers/lookup-cep/?zip_code=${cleanZipCode}`
-          );
+          const response = await fetch('http://localhost:8000/api/customers/lookup-cep/', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ zip_code: cleanZipCode }),
+          });
 
           if (!response.ok) {
             throw new Error('CEP não encontrado');
@@ -77,10 +82,10 @@ export function useViaCEPLookup(options: UseViaCEPLookupOptions = {}) {
 
           // Sucesso: preencher e fazer auto-focus
           onSuccess?.({
-            street: data.logradouro || '',
-            neighborhood: data.bairro || '',
-            city: data.localidade || '',
-            state: data.uf || '',
+            street: data.street || '',
+            neighborhood: data.neighborhood || '',
+            city: data.city || '',
+            state: data.state || '',
           });
 
           // ⚡ Auto-focus no campo "Número" após preencher

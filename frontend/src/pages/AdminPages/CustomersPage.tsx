@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAdminCustomers } from '../../hooks/useAdminCustomers';
 import { CustomerDetailModal } from './CustomerDetailModal';
+import { BlockConfirmModal } from './BlockConfirmModal';
 import styles from './AdminPages.module.css';
 
 interface CustomersPageProps {
@@ -10,8 +11,10 @@ interface CustomersPageProps {
 }
 
 export function CustomersPage({ initialFilter, onError, onSuccess }: CustomersPageProps) {
-  const { allCustomers, loading, error, fetchAllCustomers, approveCustomer, blockCustomer } =
-    useAdminCustomers({ onError, onSuccess });
+  const { allCustomers, loading, error, fetchAllCustomers, approveCustomer } = useAdminCustomers({
+    onError,
+    onSuccess,
+  });
 
   const [activeSubTab, setActiveSubTab] = useState<'pending' | 'all'>(
     initialFilter === 'PENDENTE' ? 'pending' : 'all'
@@ -20,6 +23,12 @@ export function CustomersPage({ initialFilter, onError, onSuccess }: CustomersPa
   const [successMessage, setSuccessMessage] = useState('');
   const [selectedCustomerId, setSelectedCustomerId] = useState<number | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [showBlockConfirmModal, setShowBlockConfirmModal] = useState(false);
+  const [blockCustomerData, setBlockCustomerData] = useState<{
+    id: number;
+    nickname: string;
+    action: 'block' | 'unblock';
+  } | null>(null);
 
   useEffect(() => {
     const status = activeSubTab === 'pending' ? 'PENDENTE' : undefined;
@@ -40,11 +49,27 @@ export function CustomersPage({ initialFilter, onError, onSuccess }: CustomersPa
     }
   };
 
-  const handleBlock = async (id: number, nickname: string) => {
-    const result = await blockCustomer(id, nickname);
-    if (result) {
-      setSuccessMessage(`🚫 ${nickname} bloqueado!`);
-    }
+  const handleBlock = (id: number, nickname: string) => {
+    setBlockCustomerData({ id, nickname, action: 'block' });
+    setShowBlockConfirmModal(true);
+  };
+
+  const handleUnblock = (id: number, nickname: string) => {
+    setBlockCustomerData({ id, nickname, action: 'unblock' });
+    setShowBlockConfirmModal(true);
+  };
+
+  const handleCloseBlockConfirmModal = () => {
+    setShowBlockConfirmModal(false);
+    setBlockCustomerData(null);
+  };
+
+  const handleBlockCustomerUpdated = () => {
+    setSuccessMessage(`✅ Ação realizada com sucesso!`);
+    fetchAllCustomers({
+      status: activeSubTab === 'pending' ? 'PENDENTE' : undefined,
+      search: searchInput || undefined,
+    });
   };
 
   const handleOpenModal = (customerId: number) => {
@@ -167,7 +192,12 @@ export function CustomersPage({ initialFilter, onError, onSuccess }: CustomersPa
                           </button>
                         )}
                         {customer.status === 'BLOQUEADO' && (
-                          <span className={styles.actionDisabled}>Bloqueado</span>
+                          <button
+                            className={styles.unblockButton}
+                            onClick={() => handleUnblock(customer.id, customer.nickname)}
+                          >
+                            🔓 Desbloquear
+                          </button>
                         )}
                       </div>
                     </td>
@@ -185,6 +215,17 @@ export function CustomersPage({ initialFilter, onError, onSuccess }: CustomersPa
         onClose={handleCloseModal}
         onCustomerUpdated={handleCustomerUpdated}
       />
+
+      {blockCustomerData && (
+        <BlockConfirmModal
+          isOpen={showBlockConfirmModal}
+          customerId={blockCustomerData.id}
+          customerNickname={blockCustomerData.nickname}
+          action={blockCustomerData.action}
+          onClose={handleCloseBlockConfirmModal}
+          onCustomerUpdated={handleBlockCustomerUpdated}
+        />
+      )}
     </div>
   );
 }

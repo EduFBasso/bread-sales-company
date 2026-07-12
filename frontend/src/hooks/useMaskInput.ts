@@ -43,10 +43,19 @@ export function useMaskInput(maskType: MaskType, initialValue = ''): UseMaskInpu
   const onChangeHandler = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const inputValue = e.target.value;
-      const masked = applyMask(inputValue);
+      // Extrair apenas dígitos para validação
+      const digitsOnly = inputValue.replace(/\D/g, '');
+
+      // Se não atender ao regex (validação de dígitos puros), rejeita
+      if (!pattern.regex.test(digitsOnly)) {
+        return;
+      }
+
+      // Aplicar máscara ao valor
+      const masked = pattern.format(digitsOnly);
       setInternalValue(masked);
     },
-    [applyMask]
+    [pattern]
   );
 
   // Setter manual (útil para programatic updates)

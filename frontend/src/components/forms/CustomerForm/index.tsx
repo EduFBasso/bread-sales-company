@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { FormGroup } from '../FormGroup';
 import { Input } from '../../ui/Input';
 import { Button } from '../../ui/Button';
@@ -42,23 +42,50 @@ export function CustomerForm({ onSubmit, isLoading = false, errors = {} }: Custo
   const zipCodeMask = useMaskInput('zipCode');
   const numberMask = useMaskInput('streetNumber');
 
-  // Hook para ViaCEP lookup com auto-focus
+  // Ref para debounce do lookup
+  const lookupTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Hook para ViaCEP lookup (sem auto-focus para evitar re-renders em loop)
   const { lookup: lookupCEP } = useViaCEPLookup({
     onSuccess: (newAddress) => {
       setAddress(newAddress);
     },
-    onAutoFocusField: () => {
-      numberInputRef.current?.focus();
-    },
+    // onAutoFocusField removido para evitar loop infinito de re-renders
   });
 
   // Monitorar mudanças no CEP e chamar lookup ao completar
   const handleZipCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     zipCodeMask.onChangeHandler(e);
-    if (zipCodeMask.value.length === 8) {
-      lookupCEP(zipCodeMask.value);
-    }
   };
+
+  // Monitorar o valor do CEP e fazer lookup quando completar (8 dígitos)
+  useEffect(() => {
+    // Limpar timeout anterior
+    if (lookupTimeoutRef.current) {
+      clearTimeout(lookupTimeoutRef.current);
+    }
+
+    if (zipCodeMask.value.length === 8) {
+      // Debounce de 300ms para não fazer múltiplas requisições enquanto digita
+      lookupTimeoutRef.current = setTimeout(() => {
+        lookupCEP(zipCodeMask.value);
+      }, 300);
+    } else if (zipCodeMask.value.length < 8) {
+      // Limpar endereço quando CEP fica incompleto
+      setAddress({
+        street: '',
+        neighborhood: '',
+        city: '',
+        state: '',
+      });
+    }
+
+    return () => {
+      if (lookupTimeoutRef.current) {
+        clearTimeout(lookupTimeoutRef.current);
+      }
+    };
+  }, [zipCodeMask.value]);
 
   // Enviar formulário
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -142,7 +169,7 @@ export function CustomerForm({ onSubmit, isLoading = false, errors = {} }: Custo
             value={cpfMask.formattedValue}
             onChange={cpfMask.onChangeHandler}
             inputMode={cpfMask.inputMode}
-            pattern="[0-9]*"
+            maxLength={14}
             required
           />
         </FormGroup>
@@ -155,7 +182,7 @@ export function CustomerForm({ onSubmit, isLoading = false, errors = {} }: Custo
               value={cnpjMask.formattedValue}
               onChange={cnpjMask.onChangeHandler}
               inputMode={cnpjMask.inputMode}
-              pattern="[0-9]*"
+              maxLength={18}
               required
             />
           </FormGroup>
@@ -179,7 +206,7 @@ export function CustomerForm({ onSubmit, isLoading = false, errors = {} }: Custo
           value={phoneMask.formattedValue}
           onChange={phoneMask.onChangeHandler}
           inputMode={phoneMask.inputMode}
-          pattern="[0-9]*"
+          maxLength={15}
           required
         />
       </FormGroup>
@@ -194,7 +221,7 @@ export function CustomerForm({ onSubmit, isLoading = false, errors = {} }: Custo
           value={zipCodeMask.formattedValue}
           onChange={handleZipCodeChange}
           inputMode={zipCodeMask.inputMode}
-          pattern="[0-9]*"
+          maxLength={9}
           required
         />
       </FormGroup>
@@ -217,7 +244,7 @@ export function CustomerForm({ onSubmit, isLoading = false, errors = {} }: Custo
           value={numberMask.formattedValue}
           onChange={(e) => numberMask.onChangeHandler(e)}
           inputMode={numberMask.inputMode}
-          pattern="[0-9]*"
+          maxLength={10}
           required
         />
       </FormGroup>

@@ -59,7 +59,7 @@ export function useAdminCustomers(options?: UseAdminCustomersOptions) {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch('http://localhost:8000/api/admin/stats', {
+      const response = await fetch('http://localhost:8000/api/admin/stats/', {
         method: 'GET',
         headers: getAuthHeaders(),
       });

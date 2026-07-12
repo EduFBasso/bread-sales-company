@@ -23,9 +23,11 @@ from utils.pagination import StandardResultsSetPagination
 from utils.filters import CustomerFilterSet
 from utils.viacep import lookup_cep, ViaCEPError
 from utils.password_validator import validate_customer_password, validate_password_confirmation
+from utils.password_generator import generate_random_password, is_valid_password
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters
 from django.core.exceptions import ValidationError
+from django.db.models.deletion import ProtectedError
 
 
 class CustomerViewSet(viewsets.ModelViewSet):
@@ -41,6 +43,8 @@ class CustomerViewSet(viewsets.ModelViewSet):
     - GET    /api/customers/{id}/orders/        → Pedidos do cliente
     - GET    /api/customers/{id}/transactions/  → Transações do cliente
     - GET    /api/customers/{id}/balance/       → Saldo atual
+    - POST   /api/customers/{id}/block/         → Bloqueia cliente
+    - POST   /api/customers/{id}/unblock/       → Desbloqueia cliente
     """
     
     queryset = Customer.objects.all()
@@ -69,6 +73,32 @@ class CustomerViewSet(viewsets.ModelViewSet):
         Ao criar novo cliente, vincula ao usuário autenticado
         """
         serializer.save(user=self.request.user)
+
+    def destroy(self, request, *args, **kwargs):
+        """
+        DELETE /api/customers/{id}
+
+        Quando há histórico vinculado (pedidos/transações), devolve erro 409
+        em vez de quebrar com 500.
+        """
+        instance = self.get_object()
+        try:
+            self.perform_destroy(instance)
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except ProtectedError:
+            orders_count = instance.orders.count()
+            transactions_count = instance.transactions.count()
+            return Response(
+                {
+                    'detail': (
+                        'Não é possível apagar este cliente porque ele possui histórico '
+                        'vinculado. Use bloquear para inativar o cliente.'
+                    ),
+                    'orders_count': orders_count,
+                    'transactions_count': transactions_count,
+                },
+                status=status.HTTP_409_CONFLICT,
+            )
 
     @action(detail=True, methods=['get'], url_path='orders')
     def customer_orders(self, request, pk=None):
@@ -207,13 +237,14 @@ class CustomerViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        if not password or not confirm_password:
-            return Response(
-                {'detail': 'password e confirm_password são obrigatórios'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+        # ✨ NOVO: Gerar senha automaticamente se não fornecida
+        password_plain_text = password
+        if not password:
+            password_plain_text = generate_random_password(length=8)
+            password = password_plain_text
+            confirm_password = password_plain_text
         
-        # Validar senha
+        # Validar senha (mesmo se gerada)
         valid, msg = validate_customer_password(password)
         if not valid:
             return Response(
@@ -263,9 +294,11 @@ class CustomerViewSet(viewsets.ModelViewSet):
             }
         )
         
-        # Serializar e retornar
+        # Serializar e retornar com senha em texto plano
         serializer = self.get_serializer(customer)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        response_data = serializer.data
+        response_data['password_plain_text'] = password_plain_text  # ✨ NOVO
+        return Response(response_data, status=status.HTTP_200_OK)
 
     @action(detail=True, methods=['post'], url_path='block', permission_classes=[IsAuthenticated])
     def block_customer(self, request, pk=None):
@@ -333,6 +366,66 @@ class CustomerViewSet(viewsets.ModelViewSet):
         )
         
         # Serializar e retornar
+        serializer = self.get_serializer(customer)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['post'], url_path='unblock', permission_classes=[IsAuthenticated])
+    def unblock_customer(self, request, pk=None):
+        """
+        POST /api/customers/{id}/unblock/
+
+        Endpoint para admin desbloquear um cliente e reativar acesso.
+        Requer confirmação de senha do admin para auditoria.
+        """
+        # Validar que é admin
+        if not request.user.is_staff:
+            return Response(
+                {'detail': 'Apenas administradores podem desbloquear clientes'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        # Validar password do admin
+        password = request.data.get('password')
+        if not password:
+            return Response(
+                {'detail': 'password (do admin) é obrigatória para confirmar desbloqueio'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if not request.user.check_password(password):
+            return Response(
+                {'detail': 'Senha do administrador incorreta'},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+
+        customer = self.get_object()
+
+        # Apenas clientes bloqueados podem ser desbloqueados
+        if customer.status != customer.ApprovalStatus.BLOCKED:
+            return Response(
+                {'detail': 'Apenas clientes bloqueados podem ser desbloqueados'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        reason = request.data.get('reason', 'Sem motivo especificado')
+
+        # Reativar cliente
+        customer.status = customer.ApprovalStatus.APPROVED
+        customer.blocked_by = None
+        customer.blocked_at = None
+        customer.save()
+
+        # Registrar auditoria
+        CustomerAuditLog.objects.create(
+            customer=customer,
+            action='UNBLOCKED',
+            admin_user=request.user,
+            details={
+                'reason': reason,
+                'unblocked_by_user': request.user.username,
+            }
+        )
+
         serializer = self.get_serializer(customer)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -449,17 +542,22 @@ def register_customer(request):
     Response:
     {
         "id": 1,
-        "nickname": "Padaria Central",
-        "customer_type": "PF",
-        "phone": "11987654321",
-        "zip_code": "01310100",
-        "street": "Avenida Paulista",
-        "number": "1000",
-        "neighborhood": "Centro",
-        "city": "São Paulo",
-        "state": "SP",
-        "credit_limit": "5000.00",
-        "token": "eyJ0eXAiOiJKV1QiLCJhbGc..."
+        "access_token": "eyJ0eXAiOiJKV1QiLCJhbGc...",
+        "refresh_token": "eyJ0eXAiOiJKV1QiLCJhbGc...",
+        "customer": {
+            "id": 1,
+            "nickname": "Padaria Central",
+            "customer_type": "PF",
+            "phone": "11987654321",
+            "zip_code": "01310100",
+            "street": "Avenida Paulista",
+            "number": "1000",
+            "neighborhood": "Centro",
+            "city": "São Paulo",
+            "state": "SP",
+            "credit_limit": "5000.00",
+            "status": "PENDENTE"
+        }
     }
     """
     try:
@@ -495,15 +593,20 @@ def register_customer(request):
         
         customer = Customer.objects.create(**customer_data)
         
-        # Gerar JWT token
+        # Gerar JWT tokens
         refresh = RefreshToken.for_user(user)
+        access_token = str(refresh.access_token)
+        refresh_token = str(refresh)
         
         # Serializar resposta
         serializer = CustomerSerializer(customer)
-        response_data = serializer.data
-        response_data['token'] = str(refresh.access_token)
         
-        return Response(response_data, status=status.HTTP_201_CREATED)
+        return Response({
+            'id': customer.id,
+            'access_token': access_token,
+            'refresh_token': refresh_token,
+            'customer': serializer.data,
+        }, status=status.HTTP_201_CREATED)
         
     except Exception as e:
         return Response(

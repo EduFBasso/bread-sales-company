@@ -1,5 +1,4 @@
 import { useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
 import styles from './AdminPages.module.css';
 
 interface AdminLayoutProps {
@@ -10,15 +9,15 @@ interface AdminLayoutProps {
 }
 
 export function AdminLayout({ children, activeTab, onTabChange, userName }: AdminLayoutProps) {
-  const navigate = useNavigate();
-
   const handleLogout = useCallback(() => {
     localStorage.removeItem('bread_admin_token');
     localStorage.removeItem('bread_admin_refresh');
     localStorage.removeItem('bread_admin_role');
     localStorage.removeItem('bread_admin_user');
-    navigate('/admin');
-  }, [navigate]);
+    // Usar window.location.replace para garantir que redireciona imediatamente
+    // e evita requisições pendentes com token inválido
+    window.location.replace('/admin');
+  }, []);
 
   return (
     <div className={styles.container}>
