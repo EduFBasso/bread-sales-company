@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCustomerAuth } from '../../hooks';
 import { BalanceCard } from '../../components/BalanceCard';
@@ -7,7 +8,17 @@ import styles from './ClientPages.module.css';
 
 export function ClientPages() {
   const navigate = useNavigate();
-  const { customer, logout } = useCustomerAuth();
+  const { customer, isLoading, logout } = useCustomerAuth();
+
+  useEffect(() => {
+    if (!isLoading && !customer) {
+      navigate('/customer/login');
+    }
+  }, [isLoading, customer, navigate]);
+
+  if (isLoading) {
+    return <div className={styles.container}>Carregando...</div>;
+  }
 
   const handleLogout = () => {
     logout();
@@ -15,7 +26,7 @@ export function ClientPages() {
   };
 
   if (!customer) {
-    return <div className={styles.container}>Carregando...</div>;
+    return null;
   }
 
   return (

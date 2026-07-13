@@ -42,7 +42,7 @@ export function useUpdateProduct(): UseUpdateProductReturn {
         throw new Error('Admin não autenticado');
       }
 
-      const response = await fetch(`http://localhost:8000/api/admin/products/${productId}/`, {
+      const response = await fetch(`/api/admin/products/${productId}/`, {
         method: 'PATCH',
         headers: {
           Authorization: `Bearer ${adminToken}`,

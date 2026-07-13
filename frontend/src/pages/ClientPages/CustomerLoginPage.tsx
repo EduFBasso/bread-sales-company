@@ -23,14 +23,17 @@ export function CustomerLoginPage() {
     e.preventDefault();
     clearError();
 
-    if (!nickname.trim()) {
+    const sanitizedNickname = nickname.trim();
+    const sanitizedPassword = password.trim();
+
+    if (!sanitizedNickname) {
       return;
     }
-    if (!password.trim()) {
+    if (!sanitizedPassword) {
       return;
     }
 
-    await login(nickname, password);
+    await login(sanitizedNickname, sanitizedPassword);
   };
 
   const handleGoHome = () => {
@@ -38,8 +41,8 @@ export function CustomerLoginPage() {
   };
 
   return (
-    <div className={styles.container}>
-      <div className={styles.card}>
+    <div className={styles.page}>
+      <div className={styles.container}>
         <h1 className={styles.title}>🥖 Login Cliente</h1>
         <p className={styles.subtitle}>Acesse sua conta para fazer pedidos</p>
 
@@ -71,7 +74,7 @@ export function CustomerLoginPage() {
 
           <div className={styles.formGroup}>
             <label className={styles.label}>Senha</label>
-            <div style={{ position: 'relative' }}>
+            <div className={styles.passwordField}>
               <input
                 type={showPassword ? 'text' : 'password'}
                 value={password}
@@ -83,42 +86,26 @@ export function CustomerLoginPage() {
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                style={{
-                  position: 'absolute',
-                  right: '10px',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  fontSize: '18px',
-                }}
+                className={styles.passwordToggle}
+                aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
               >
                 {showPassword ? '👁️' : '👁️‍🗨️'}
               </button>
             </div>
           </div>
 
-          <Button
-            variant="primary"
-            type="submit"
-            disabled={loading || !nickname.trim() || !password.trim()}
-          >
+          <Button variant="primary" type="submit" disabled={loading}>
             {loading ? '⏳ Entrando...' : '🔓 Entrar'}
           </Button>
         </form>
 
-        <div className={styles.footer}>
-          <button className={styles.backLink} onClick={handleGoHome}>
+        <div className={styles.footerActions}>
+          <Button variant="secondary" type="button" onClick={handleGoHome}>
             ← Voltar para Home
-          </button>
-          <button
-            className={styles.registerLink}
-            onClick={() => navigate('/register')}
-            style={{ float: 'right' }}
-          >
+          </Button>
+          <Button variant="secondary" type="button" onClick={() => navigate('/register')}>
             Cadastrar-se →
-          </button>
+          </Button>
         </div>
       </div>
     </div>

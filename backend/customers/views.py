@@ -80,7 +80,24 @@ class CustomerViewSet(viewsets.ModelViewSet):
 
         Quando há histórico vinculado (pedidos/transações), devolve erro 409
         em vez de quebrar com 500.
+
+        Para administradores, exige confirmação da senha do dono via
+        campo `admin_password` no body da requisição.
         """
+        if request.user.is_staff:
+            admin_password = request.data.get('admin_password')
+            if not admin_password:
+                return Response(
+                    {'detail': 'admin_password é obrigatória para apagar cliente'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            if not request.user.check_password(admin_password):
+                return Response(
+                    {'detail': 'Senha do administrador incorreta'},
+                    status=status.HTTP_401_UNAUTHORIZED,
+                )
+
         instance = self.get_object()
         try:
             self.perform_destroy(instance)
@@ -196,7 +213,8 @@ class CustomerViewSet(viewsets.ModelViewSet):
         {
             "credit_limit": "1000.00",
             "password": "Pwd123456",
-            "confirm_password": "Pwd123456"
+            "confirm_password": "Pwd123456",
+            "admin_password": "SenhaDono123"
         }
         
         Response (sucesso):
@@ -215,6 +233,19 @@ class CustomerViewSet(viewsets.ModelViewSet):
             return Response(
                 {'detail': 'Apenas administradores podem aprovar clientes'},
                 status=status.HTTP_403_FORBIDDEN
+            )
+
+        admin_password = request.data.get('admin_password')
+        if not admin_password:
+            return Response(
+                {'detail': 'admin_password é obrigatória para confirmar aprovação'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if not request.user.check_password(admin_password):
+            return Response(
+                {'detail': 'Senha do administrador incorreta'},
+                status=status.HTTP_401_UNAUTHORIZED
             )
         
         customer = self.get_object()
@@ -515,6 +546,40 @@ class CustomerViewSet(viewsets.ModelViewSet):
             {'detail': 'Senha definida com sucesso'},
             status=status.HTTP_200_OK
         )
+
+    @action(detail=False, methods=['post'], url_path='verify-admin-password', permission_classes=[IsAuthenticated])
+    def verify_admin_password(self, request):
+        """
+        POST /api/customers/verify-admin-password/
+
+        Valida a senha do administrador para ações sensíveis de interface
+        (ex.: visualizar/copiar/compartilhar senha de cliente).
+
+        Request:
+        {
+            "admin_password": "senha_do_admin"
+        }
+        """
+        if not request.user.is_staff:
+            return Response(
+                {'detail': 'Apenas administradores podem validar esta ação'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        admin_password = request.data.get('admin_password')
+        if not admin_password:
+            return Response(
+                {'detail': 'admin_password é obrigatória'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if not request.user.check_password(admin_password):
+            return Response(
+                {'detail': 'Senha do administrador incorreta'},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
+        return Response({'detail': 'Senha confirmada'}, status=status.HTTP_200_OK)
 
 
 @api_view(['POST'])
@@ -1112,7 +1177,7 @@ def customer_create_order(request):
             )
         
         # Validar dados de entrada
-        serializer = OrderCreateSerializer(data=request.data)
+        serializer = OrderCreateSerializer(data=request.data, context={'customer': customer})
         if not serializer.is_valid():
             return Response(
                 {'detail': 'Dados inválidos', 'errors': serializer.errors},

@@ -2,13 +2,16 @@ import { useState, useEffect, useCallback } from 'react';
 
 interface CustomerData {
   id: number;
-  customer_id: number;
+  customer_id?: number;
   nickname: string;
   customer_type: string;
   phone?: string;
   status: string;
   current_balance?: string;
+  financial_limit?: string;
+  financial_used?: string;
   available_credit?: string;
+  financial_available?: string;
   credit_limit?: string;
 }
 
@@ -22,17 +25,79 @@ export function useCustomerAuth() {
     const storedToken = localStorage.getItem('bread_customer_token');
     const storedCustomer = localStorage.getItem('bread_customer_user');
 
-    if (storedToken && storedCustomer) {
-      try {
-        setToken(storedToken);
-        setCustomer(JSON.parse(storedCustomer));
-      } catch (err) {
-        console.error('Erro ao carregar dados do cliente:', err);
+    const bootstrapCustomerSession = async () => {
+      // Sessão válida completa no storage
+      if (storedToken && storedCustomer) {
+        try {
+          setToken(storedToken);
+          setCustomer(JSON.parse(storedCustomer));
+
+          // Sincroniza com backend para evitar dados financeiros defasados.
+          const response = await fetch('/api/customers/me/', {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${storedToken}`,
+            },
+          });
+
+          if (response.ok) {
+            const freshCustomerData: CustomerData = await response.json();
+            localStorage.setItem('bread_customer_user', JSON.stringify(freshCustomerData));
+            setCustomer(freshCustomerData);
+          }
+
+          setIsLoading(false);
+          return;
+        } catch (err) {
+          console.error('Erro ao carregar dados do cliente:', err);
+          logout();
+          setIsLoading(false);
+          return;
+        }
+      }
+
+      // Token sem customer no storage: tenta reconstruir sessão via /me
+      if (storedToken && !storedCustomer) {
+        try {
+          const response = await fetch('/api/customers/me/', {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${storedToken}`,
+            },
+          });
+
+          if (!response.ok) {
+            logout();
+            setIsLoading(false);
+            return;
+          }
+
+          const customerData: CustomerData = await response.json();
+          localStorage.setItem('bread_customer_user', JSON.stringify(customerData));
+          setToken(storedToken);
+          setCustomer(customerData);
+          setIsLoading(false);
+          return;
+        } catch (err) {
+          console.error('Erro ao reconstruir sessão do cliente:', err);
+          logout();
+          setIsLoading(false);
+          return;
+        }
+      }
+
+      // Sem sessão válida
+      if (!storedToken && storedCustomer) {
+        // Evita estado inconsistente de customer sem token
         logout();
       }
-    }
 
-    setIsLoading(false);
+      setIsLoading(false);
+    };
+
+    void bootstrapCustomerSession();
   }, []);
 
   const logout = useCallback(() => {

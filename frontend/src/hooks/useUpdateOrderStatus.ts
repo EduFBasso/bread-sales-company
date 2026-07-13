@@ -30,7 +30,7 @@ export function useUpdateOrderStatus() {
     setError(null);
 
     try {
-      const response = await fetch(`http://localhost:8000/api/admin/orders/${orderId}/status/`, {
+      const response = await fetch(`/api/admin/orders/${orderId}/status/`, {
         method: 'PATCH',
         headers: {
           Authorization: `Bearer ${token}`,

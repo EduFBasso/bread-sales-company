@@ -562,6 +562,17 @@
   animation: slideUp 0.3s ease-out;
 }
 
+.passwordDialogContent {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  max-width: 440px;
+  width: 92%;
+  display: flex;
+  flex-direction: column;
+  animation: slideUp 0.3s ease-out;
+}
+
 @keyframes slideUp {
   from {
     opacity: 0;
@@ -649,15 +660,73 @@
   font-weight: 500;
 }
 
+.passwordInlineRow {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.passwordReadOnlyInput {
+  flex: 1;
+  min-width: 180px;
+  padding: 0.7rem 0;
+  border: none;
+  border-bottom: 1px solid #e0d5ca;
+  background: transparent;
+  font-size: 1rem;
+  color: #2c2c2c;
+  box-shadow: none;
+}
+
+.passwordReadOnlyInput:focus {
+  outline: none;
+  border-bottom-color: #d9825d;
+}
+
+.inlinePasswordAction {
+  padding: 0.55rem 0.8rem;
+  border: 1px solid #e0d5ca;
+  border-radius: 999px;
+  background: #fff;
+  color: #5f4c3d;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.inlinePasswordAction:hover {
+  border-color: #d9825d;
+  color: #d9825d;
+}
+
+.inlinePasswordAction:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.inlineActionLink {
+  margin-left: 0.5rem;
+  color: #0b66c2;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.inlineActionLink:hover {
+  text-decoration: underline;
+}
+
 .balanceDetail {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 1rem;
 }
 
 .balanceItem {
   background-color: #f9f7f4;
-  padding: 1rem;
+  padding: 0.9rem 1rem;
   border-radius: 8px;
   border-left: 4px solid #d9825d;
 }
@@ -672,9 +741,15 @@
 }
 
 .balanceValue {
-  font-size: 1.5rem;
+  font-size: 1.35rem;
   font-weight: 700;
   margin: 0;
+}
+
+@media (max-width: 900px) {
+  .balanceDetail {
+    grid-template-columns: 1fr;
+  }
 }
 
 .errorMessage {
@@ -700,6 +775,52 @@
 .errorText {
   color: #d9534f;
   font-size: 0.95rem;
+}
+
+.passwordDialogDescription {
+  margin: 0 0 1rem 0;
+  color: #666;
+  font-size: 0.95rem;
+}
+
+.passwordDialogField {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.passwordDialogField label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #444;
+}
+
+.adminPasswordInput {
+  flex: 1;
+  padding: 0.8rem 1rem;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 0.95rem;
+}
+
+.adminPasswordInput:focus {
+  outline: none;
+  border-color: #d9825d;
+  box-shadow: 0 0 0 3px rgba(217, 130, 93, 0.1);
+}
+
+.passwordDialogActions {
+  display: flex;
+  gap: 0.75rem;
+  padding: 1rem 1.5rem 1.5rem;
+}
+
+.sectionActions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+  padding-top: 0.75rem;
+  flex-wrap: wrap;
 }
 
 .modalActions {
@@ -832,6 +953,19 @@
     grid-template-columns: 1fr;
   }
 
+  .passwordInlineRow {
+    align-items: stretch;
+  }
+
+  .passwordReadOnlyInput {
+    min-width: 100%;
+  }
+
+  .inlinePasswordAction {
+    flex: 1 1 calc(50% - 0.5rem);
+    text-align: center;
+  }
+
   .modalActions {
     padding: 1rem;
     gap: 0.5rem;
@@ -843,5 +977,16 @@
   .closeButtonModal {
     min-width: auto;
     width: 100%;
+  }
+
+  .passwordDialogActions {
+    flex-direction: column;
+    padding: 1rem;
+  }
+
+  .sectionActions {
+    padding-top: 0.5rem;
+    gap: 0.5rem;
+    flex-direction: column;
   }
 }

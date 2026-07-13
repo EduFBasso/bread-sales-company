@@ -1,10 +1,10 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useCustomerAuth } from './useCustomerAuth';
 
 export interface CustomerDashboardData {
-  balance: number;
-  availableCredit: number;
-  creditLimit: number;
+  financialUsed: number;
+  financialAvailable: number;
+  financialLimit: number;
   totalOrders: number;
   pendingOrders: number;
   totalSpent: number;
@@ -14,26 +14,29 @@ export function useCustomerDashboard() {
   const { customer, token, isAuthenticated } = useCustomerAuth();
   const [data, setData] = useState<CustomerDashboardData | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const hasInitialized = useRef(false);
+
+  const parseMoney = (value?: string) => {
+    const parsed = Number.parseFloat(String(value ?? '0'));
+    return Number.isFinite(parsed) ? parsed : 0;
+  };
 
   useEffect(() => {
-    if (!isAuthenticated || !token || !customer || hasInitialized.current) {
+    if (!isAuthenticated || !token || !customer) {
+      setData(null);
       return;
     }
 
-    hasInitialized.current = true;
-
     try {
-      // Parse customer data for balance info
-      const balance = parseFloat(String(customer.current_balance ?? '0')) || 0;
-      const availableCredit = parseFloat(String(customer.available_credit ?? '0')) || 0;
-      const creditLimit = parseFloat(String(customer.credit_limit ?? '0')) || 0;
+      const financialUsed = parseMoney(customer.financial_used ?? customer.current_balance);
+      const financialAvailable = parseMoney(
+        customer.financial_available ?? customer.available_credit
+      );
+      const financialLimit = parseMoney(customer.financial_limit ?? customer.credit_limit);
 
-      // Prepare dashboard data
       const dashboardData: CustomerDashboardData = {
-        balance,
-        availableCredit,
-        creditLimit,
+        financialUsed,
+        financialAvailable,
+        financialLimit,
         totalOrders: 0,
         pendingOrders: 0,
         totalSpent: 0,

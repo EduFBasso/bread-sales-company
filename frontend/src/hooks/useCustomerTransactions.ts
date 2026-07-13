@@ -29,7 +29,7 @@ export function useCustomerTransactions() {
         setLoading(true);
         setError(null);
 
-        const response = await fetch('http://localhost:8000/api/customers/transactions/', {
+        const response = await fetch('/api/customers/transactions/', {
           method: 'GET',
           headers: {
             Authorization: `Bearer ${token}`,

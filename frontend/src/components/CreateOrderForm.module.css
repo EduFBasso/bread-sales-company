@@ -21,6 +21,57 @@
   gap: 24px;
 }
 
+.financialSection {
+  background: #fff;
+  border: 1px solid #e8e2d5;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.financialSection h3 {
+  margin: 0 0 12px 0;
+  font-size: 24px;
+  color: #2c2c2c;
+  border-bottom: 2px solid #d4825c;
+  padding-bottom: 8px;
+}
+
+.financialGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.financialCard {
+  background-color: #f9f7f4;
+  border-left: 4px solid #d4825c;
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.financialCard label {
+  display: block;
+  font-size: 12px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: #8f8f8f;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.financialCard p {
+  margin: 0;
+  font-size: 36px;
+  font-weight: 800;
+  color: #2c2c2c;
+}
+
+.financialProjection {
+  margin: 10px 0 0 0;
+  color: #5f4c3d;
+  font-size: 14px;
+}
+
 .section {
   padding: 20px;
   background-color: #f9f7f4;
@@ -58,8 +109,32 @@
 }
 
 .input {
+  width: 100%;
+  text-align: center;
+}
+
+.quantitySelectorInput {
   width: 100px;
   text-align: center;
+  padding: 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: inherit;
+}
+
+.dateAutoInput {
+  width: fit-content;
+  min-width: 220px;
+  max-width: 100%;
+  background: #f0f2f6;
+  border: 1px solid #d6dae0;
+  color: #2c2c2c;
+  font-weight: 700;
+  font-size: 22px;
+  line-height: 1.15;
+  letter-spacing: 0.2px;
+  text-transform: lowercase;
 }
 
 .textarea {
@@ -301,12 +376,29 @@
     padding: 16px;
   }
 
+  .financialGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .financialCard p {
+    font-size: 24px;
+  }
+
   .productSelector {
     flex-direction: column;
   }
 
   .select {
     min-width: 100%;
+  }
+
+  .quantitySelectorInput {
+    width: 100%;
+  }
+
+  .dateAutoInput {
+    width: 100%;
+    font-size: 18px;
   }
 
   .cartItem {

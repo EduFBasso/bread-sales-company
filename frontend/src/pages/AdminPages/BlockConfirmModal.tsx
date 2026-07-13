@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { AdminPasswordDialog } from './AdminPasswordDialog';
 import styles from './AdminPages.module.css';
 
 interface BlockConfirmModalProps {
@@ -18,11 +19,10 @@ export const BlockConfirmModal: React.FC<BlockConfirmModalProps> = ({
   onClose,
   onCustomerUpdated,
 }) => {
-  const [adminPasswordInput, setAdminPasswordInput] = useState('');
-  const [passwordValidated, setPasswordValidated] = useState(false);
-  const [showAdminPassword, setShowAdminPassword] = useState(false);
   const [confirmModalLoading, setConfirmModalLoading] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
+  const [pendingSecureAction, setPendingSecureAction] = useState<'primary' | 'delete' | null>(null);
 
   if (!isOpen) {
     return null;
@@ -48,30 +48,8 @@ export const BlockConfirmModal: React.FC<BlockConfirmModalProps> = ({
     return text || fallbackMessage;
   };
 
-  // 🔐 Validar senha do admin
-  const handleValidateAdminPassword = async () => {
-    if (!adminPasswordInput) {
-      setActionError('Digite a sua senha');
-      return;
-    }
-
-    setConfirmModalLoading(true);
-    setActionError(null);
-
-    try {
-      // Para este MVP, aceitamos qualquer senha não-vazia
-      // Em produção, seria necessário um endpoint de validação real no backend
-      setPasswordValidated(true);
-      setActionError(null);
-    } catch (err) {
-      setActionError('Erro ao validar. Tente novamente.');
-    } finally {
-      setConfirmModalLoading(false);
-    }
-  };
-
   // 🚫 Bloquear / 🔓 Desbloquear cliente
-  const handleBlockActionConfirm = async () => {
+  const handleBlockActionConfirm = async (adminPassword: string) => {
     setConfirmModalLoading(true);
     setActionError(null);
 
@@ -84,14 +62,14 @@ export const BlockConfirmModal: React.FC<BlockConfirmModalProps> = ({
       const endpoint = action === 'block' ? '/block' : '/unblock';
       const actionName = action === 'block' ? 'bloquear' : 'desbloquear';
 
-      const response = await fetch(`http://localhost:8000/api/customers/${customerId}${endpoint}`, {
+      const response = await fetch(`/api/customers/${customerId}${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          password: adminPasswordInput,
+          password: adminPassword,
           reason: action === 'block' ? 'Bloqueado via admin panel' : 'Desbloqueado via admin panel',
         }),
       });
@@ -117,7 +95,7 @@ export const BlockConfirmModal: React.FC<BlockConfirmModalProps> = ({
   };
 
   // 🗑️ Apagar cliente (hard delete)
-  const handleDeleteConfirm = async () => {
+  const handleDeleteConfirm = async (adminPassword: string) => {
     setConfirmModalLoading(true);
     setActionError(null);
 
@@ -127,11 +105,15 @@ export const BlockConfirmModal: React.FC<BlockConfirmModalProps> = ({
         throw new Error('Token não encontrado');
       }
 
-      const response = await fetch(`http://localhost:8000/api/customers/${customerId}`, {
+      const response = await fetch(`/api/customers/${customerId}`, {
         method: 'DELETE',
         headers: {
+          'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
+        body: JSON.stringify({
+          admin_password: adminPassword,
+        }),
       });
 
       if (!response.ok) {
@@ -156,9 +138,29 @@ export const BlockConfirmModal: React.FC<BlockConfirmModalProps> = ({
   // Fechar modal
   const handleCloseConfirmModal = () => {
     onClose();
-    setAdminPasswordInput('');
-    setPasswordValidated(false);
     setActionError(null);
+    setPasswordDialogOpen(false);
+    setPendingSecureAction(null);
+  };
+
+  const openPasswordDialog = (secureAction: 'primary' | 'delete') => {
+    setActionError(null);
+    setPendingSecureAction(secureAction);
+    setPasswordDialogOpen(true);
+  };
+
+  const handlePasswordConfirm = async (adminPassword: string) => {
+    if (!adminPassword) {
+      setActionError('Digite a senha do dono para continuar');
+      return;
+    }
+
+    if (pendingSecureAction === 'delete') {
+      await handleDeleteConfirm(adminPassword);
+      return;
+    }
+
+    await handleBlockActionConfirm(adminPassword);
   };
 
   return (
@@ -172,167 +174,102 @@ export const BlockConfirmModal: React.FC<BlockConfirmModalProps> = ({
         </div>
 
         <div className={styles.modalBody}>
-          {!passwordValidated ? (
-            // 🔑 Pedir senha do admin
-            <div style={{ padding: '20px' }}>
-              <p style={{ marginBottom: '20px', fontSize: '14px', color: '#666' }}>
-                Digite sua senha de administrador para continuar com {customerNickname}:
-              </p>
+          <div style={{ padding: '20px' }}>
+            <p style={{ marginBottom: '20px', fontSize: '14px', color: '#666' }}>
+              Escolha a ação para {customerNickname}. A confirmação da senha do dono será pedida no
+              próximo passo.
+            </p>
 
-              <div style={{ marginBottom: '20px' }}>
-                <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600' }}>
-                  Sua Senha*
-                </label>
-                <div style={{ position: 'relative', display: 'flex', gap: '8px' }}>
-                  <input
-                    type={showAdminPassword ? 'text' : 'password'}
-                    value={adminPasswordInput}
-                    onChange={(e) => setAdminPasswordInput(e.target.value)}
-                    placeholder="Digite sua senha"
-                    style={{
-                      flex: 1,
-                      padding: '10px',
-                      border: '1px solid #ddd',
-                      borderRadius: '4px',
-                      fontSize: '14px',
-                    }}
-                    disabled={confirmModalLoading}
-                    onKeyPress={(e) => {
-                      if (e.key === 'Enter' && !confirmModalLoading) {
-                        handleValidateAdminPassword();
-                      }
-                    }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowAdminPassword(!showAdminPassword)}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      cursor: 'pointer',
-                      fontSize: '18px',
-                      padding: '8px',
-                    }}
-                    disabled={confirmModalLoading}
-                  >
-                    {showAdminPassword ? '👁️' : '👁️‍🗨️'}
-                  </button>
-                </div>
-              </div>
-
-              {actionError && (
-                <div
-                  style={{
-                    padding: '10px',
-                    background: '#ffebee',
-                    color: '#c62828',
-                    borderRadius: '4px',
-                    marginBottom: '20px',
-                    fontSize: '14px',
-                  }}
-                >
-                  {actionError}
-                </div>
-              )}
-
-              <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-                <button
-                  onClick={handleCloseConfirmModal}
-                  disabled={confirmModalLoading}
-                  style={{
-                    padding: '10px 20px',
-                    background: '#f0f0f0',
-                    border: '1px solid #ddd',
-                    borderRadius: '4px',
-                    cursor: 'pointer',
-                    fontSize: '14px',
-                  }}
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={handleValidateAdminPassword}
-                  disabled={!adminPasswordInput || confirmModalLoading}
-                  style={{
-                    padding: '10px 20px',
-                    background: '#2196f3',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '4px',
-                    cursor: 'pointer',
-                    fontSize: '14px',
-                  }}
-                >
-                  {confirmModalLoading ? '⏳ Validando...' : '✓ Validar'}
-                </button>
-              </div>
-            </div>
-          ) : (
-            // ✅ Senha validada - Mostrar opções
-            <div style={{ padding: '20px' }}>
+            {actionError && (
               <div
                 style={{
-                  padding: '15px',
-                  background: '#e8f5e9',
-                  color: '#2e7d32',
+                  padding: '10px',
+                  background: '#ffebee',
+                  color: '#c62828',
                   borderRadius: '4px',
                   marginBottom: '20px',
                   fontSize: '14px',
                 }}
               >
-                ✅ Senha validada. Escolha uma ação para {customerNickname}:
+                {actionError}
               </div>
+            )}
 
-              {actionError && (
-                <div
-                  style={{
-                    padding: '10px',
-                    background: '#ffebee',
-                    color: '#c62828',
-                    borderRadius: '4px',
-                    marginBottom: '20px',
-                    fontSize: '14px',
-                  }}
-                >
-                  {actionError}
-                </div>
+            {/* Opção 1: Bloquear */}
+            <div
+              style={{
+                padding: '15px',
+                border: action === 'block' ? '1px solid #ffc107' : '1px solid #9e9e9e',
+                borderRadius: '4px',
+                marginBottom: '15px',
+                background: action === 'block' ? '#fffef0' : '#f5f5f5',
+              }}
+            >
+              {action === 'block' ? (
+                <>
+                  <h4 style={{ margin: '0 0 10px 0', color: '#f57f17' }}>🚫 Bloquear Cliente</h4>
+                  <p style={{ margin: '0 0 10px 0', fontSize: '13px', color: '#666' }}>
+                    O cliente será bloqueado, mas todos os seus dados serão preservados. Você poderá
+                    reativá-lo depois se necessário.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <h4 style={{ margin: '0 0 10px 0', color: '#616161' }}>🔓 Desbloquear Cliente</h4>
+                  <p style={{ margin: '0 0 10px 0', fontSize: '13px', color: '#666' }}>
+                    O cliente será desbloqueado e poderá fazer pedidos novamente.
+                  </p>
+                </>
               )}
+              <button
+                onClick={() => openPasswordDialog('primary')}
+                disabled={confirmModalLoading}
+                style={{
+                  padding: '10px 16px',
+                  background: action === 'block' ? '#ffc107' : '#757575',
+                  color: action === 'block' ? '#000' : '#fff',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                }}
+              >
+                {confirmModalLoading
+                  ? action === 'block'
+                    ? '⏳ Bloqueando...'
+                    : '⏳ Desbloqueando...'
+                  : action === 'block'
+                    ? '🚫 Bloquear'
+                    : '🔓 Desbloquear'}
+              </button>
+            </div>
 
-              {/* Opção 1: Bloquear */}
+            {/* Opção 2: Apagar (apenas quando ação é 'block') */}
+            {action === 'block' && (
               <div
                 style={{
                   padding: '15px',
-                  border: action === 'block' ? '1px solid #ffc107' : '1px solid #9e9e9e',
+                  border: '2px solid #d32f2f',
                   borderRadius: '4px',
-                  marginBottom: '15px',
-                  background: action === 'block' ? '#fffef0' : '#f5f5f5',
+                  background: '#ffebee',
                 }}
               >
-                {action === 'block' ? (
-                  <>
-                    <h4 style={{ margin: '0 0 10px 0', color: '#f57f17' }}>🚫 Bloquear Cliente</h4>
-                    <p style={{ margin: '0 0 10px 0', fontSize: '13px', color: '#666' }}>
-                      O cliente será bloqueado, mas todos os seus dados serão preservados. Você
-                      poderá reativá-lo depois se necessário.
-                    </p>
-                  </>
-                ) : (
-                  <>
-                    <h4 style={{ margin: '0 0 10px 0', color: '#616161' }}>
-                      🔓 Desbloquear Cliente
-                    </h4>
-                    <p style={{ margin: '0 0 10px 0', fontSize: '13px', color: '#666' }}>
-                      O cliente será desbloqueado e poderá fazer pedidos novamente.
-                    </p>
-                  </>
-                )}
+                <h4 style={{ margin: '0 0 10px 0', color: '#d32f2f' }}>
+                  🗑️ Apagar Cliente (PERMANENTE)
+                </h4>
+                <p style={{ margin: '0 0 10px 0', fontSize: '13px', color: '#666' }}>
+                  <strong>⚠️ AVISO:</strong> Esta ação <strong>NÃO PODE SER DESFEITA</strong>. O
+                  cliente e todo o seu histórico (pedidos, transações, etc.) serão deletados
+                  permanentemente do sistema.
+                </p>
                 <button
-                  onClick={handleBlockActionConfirm}
+                  onClick={() => openPasswordDialog('delete')}
                   disabled={confirmModalLoading}
                   style={{
                     padding: '10px 16px',
-                    background: action === 'block' ? '#ffc107' : '#757575',
-                    color: action === 'block' ? '#000' : '#fff',
+                    background: '#d32f2f',
+                    color: 'white',
                     border: 'none',
                     borderRadius: '4px',
                     cursor: 'pointer',
@@ -340,108 +277,76 @@ export const BlockConfirmModal: React.FC<BlockConfirmModalProps> = ({
                     fontWeight: '600',
                   }}
                 >
-                  {confirmModalLoading
-                    ? action === 'block'
-                      ? '⏳ Bloqueando...'
-                      : '⏳ Desbloqueando...'
-                    : action === 'block'
-                      ? '🚫 Bloquear'
-                      : '🔓 Desbloquear'}
+                  {confirmModalLoading ? '⏳ Apagando...' : '🗑️ Apagar Permanentemente'}
                 </button>
               </div>
-
-              {/* Opção 2: Apagar (apenas quando ação é 'block') */}
-              {action === 'block' && (
-                <div
-                  style={{
-                    padding: '15px',
-                    border: '2px solid #d32f2f',
-                    borderRadius: '4px',
-                    background: '#ffebee',
-                  }}
-                >
-                  <h4 style={{ margin: '0 0 10px 0', color: '#d32f2f' }}>
-                    🗑️ Apagar Cliente (PERMANENTE)
-                  </h4>
-                  <p style={{ margin: '0 0 10px 0', fontSize: '13px', color: '#666' }}>
-                    <strong>⚠️ AVISO:</strong> Esta ação <strong>NÃO PODE SER DESFEITA</strong>. O
-                    cliente e todo o seu histórico (pedidos, transações, etc.) serão deletados
-                    permanentemente do sistema.
-                  </p>
-                  <button
-                    onClick={handleDeleteConfirm}
-                    disabled={confirmModalLoading}
-                    style={{
-                      padding: '10px 16px',
-                      background: '#d32f2f',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '4px',
-                      cursor: 'pointer',
-                      fontSize: '14px',
-                      fontWeight: '600',
-                    }}
-                  >
-                    {confirmModalLoading ? '⏳ Apagando...' : '🗑️ Apagar Permanentemente'}
-                  </button>
-                </div>
-              )}
-              {action === 'unblock' && (
-                <div
-                  style={{
-                    padding: '15px',
-                    border: '2px solid #e0e0e0',
-                    borderRadius: '4px',
-                    background: '#f5f5f5',
-                    opacity: 0.6,
-                  }}
-                >
-                  <h4 style={{ margin: '0 0 10px 0', color: '#9e9e9e' }}>
-                    🗑️ Apagar Cliente (PERMANENTE)
-                  </h4>
-                  <p style={{ margin: '0 0 10px 0', fontSize: '13px', color: '#999' }}>
-                    <strong>⚠️ AVISO:</strong> Esta ação <strong>NÃO PODE SER DESFEITA</strong>. O
-                    cliente e todo o seu histórico (pedidos, transações, etc.) serão deletados
-                    permanentemente do sistema.
-                  </p>
-                  <button
-                    disabled
-                    style={{
-                      padding: '10px 16px',
-                      background: '#e0e0e0',
-                      color: '#999',
-                      border: 'none',
-                      borderRadius: '4px',
-                      cursor: 'not-allowed',
-                      fontSize: '14px',
-                      fontWeight: '600',
-                    }}
-                  >
-                    🗑️ Apagar Permanentemente
-                  </button>
-                </div>
-              )}
-
-              <div style={{ marginTop: '20px', paddingTop: '15px', borderTop: '1px solid #ddd' }}>
+            )}
+            {action === 'unblock' && (
+              <div
+                style={{
+                  padding: '15px',
+                  border: '2px solid #e0e0e0',
+                  borderRadius: '4px',
+                  background: '#f5f5f5',
+                  opacity: 0.6,
+                }}
+              >
+                <h4 style={{ margin: '0 0 10px 0', color: '#9e9e9e' }}>
+                  🗑️ Apagar Cliente (PERMANENTE)
+                </h4>
+                <p style={{ margin: '0 0 10px 0', fontSize: '13px', color: '#999' }}>
+                  <strong>⚠️ AVISO:</strong> Esta ação <strong>NÃO PODE SER DESFEITA</strong>. O
+                  cliente e todo o seu histórico (pedidos, transações, etc.) serão deletados
+                  permanentemente do sistema.
+                </p>
                 <button
-                  onClick={handleCloseConfirmModal}
-                  disabled={confirmModalLoading}
+                  disabled
                   style={{
-                    width: '100%',
-                    padding: '10px',
-                    background: '#f0f0f0',
-                    border: '1px solid #ddd',
+                    padding: '10px 16px',
+                    background: '#e0e0e0',
+                    color: '#999',
+                    border: 'none',
                     borderRadius: '4px',
-                    cursor: 'pointer',
+                    cursor: 'not-allowed',
                     fontSize: '14px',
+                    fontWeight: '600',
                   }}
                 >
-                  Cancelar
+                  🗑️ Apagar Permanentemente
                 </button>
               </div>
+            )}
+
+            <div style={{ marginTop: '20px', paddingTop: '15px', borderTop: '1px solid #ddd' }}>
+              <button
+                onClick={handleCloseConfirmModal}
+                disabled={confirmModalLoading}
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  background: '#f0f0f0',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                }}
+              >
+                Cancelar
+              </button>
             </div>
-          )}
+          </div>
         </div>
+
+        <AdminPasswordDialog
+          isOpen={passwordDialogOpen}
+          title="Confirmar com Senha do Dono"
+          description={`Digite a senha do dono para continuar com ${customerNickname}.`}
+          confirmLabel={pendingSecureAction === 'delete' ? 'Apagar Cliente' : 'Confirmar Ação'}
+          isLoading={confirmModalLoading}
+          error={actionError}
+          onClose={() => setPasswordDialogOpen(false)}
+          onConfirm={handlePasswordConfirm}
+        />
       </div>
     </div>
   );

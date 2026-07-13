@@ -33,7 +33,7 @@ export function useCancelOrder() {
     setError(null);
 
     try {
-      const response = await fetch(`http://localhost:8000/api/admin/orders/${orderId}/cancel/`, {
+      const response = await fetch(`/api/admin/orders/${orderId}/cancel/`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,

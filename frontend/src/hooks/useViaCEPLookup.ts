@@ -61,7 +61,7 @@ export function useViaCEPLookup(options: UseViaCEPLookupOptions = {}) {
       // Debounce 300ms antes de fazer a requisição
       debounceTimerRef.current = setTimeout(async () => {
         try {
-          const response = await fetch('http://localhost:8000/api/customers/lookup-cep/', {
+          const response = await fetch('/api/customers/lookup-cep/', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',

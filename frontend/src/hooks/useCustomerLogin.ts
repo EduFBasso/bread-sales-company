@@ -30,18 +30,26 @@ export function useCustomerLogin(options?: UseCustomerLoginOptions) {
     optionsRef.current = options;
   });
 
+  const removeInvisibleCharacters = (value: string) => {
+    // Remove zero-width and hidden formatting chars commonly introduced by mobile paste.
+    return value.replace(/[\u00A0\u200B-\u200D\u2060\uFEFF]/g, '');
+  };
+
   const login = useCallback(
     async (nickname: string, password: string) => {
       setLoading(true);
       setError(null);
 
+      const sanitizedNickname = removeInvisibleCharacters(nickname).trim();
+      const sanitizedPassword = removeInvisibleCharacters(password).trim();
+
       try {
-        const response = await fetch('http://localhost:8000/api/customers/login/', {
+        const response = await fetch('/api/customers/login/', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ nickname, password }),
+          body: JSON.stringify({ nickname: sanitizedNickname, password: sanitizedPassword }),
         });
 
         const data = await response.json();

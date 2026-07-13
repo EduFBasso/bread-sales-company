@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useProducts, Product } from '../hooks/useProducts';
 import { useCreateOrder, CreateOrderPayload } from '../hooks/useCreateOrder';
+import { useCustomerAuth } from '../hooks/useCustomerAuth';
 import styles from './CreateOrderForm.module.css';
 
 interface CartItem {
@@ -11,20 +12,54 @@ interface CartItem {
 
 export function CreateOrderForm() {
   const navigate = useNavigate();
+  const { customer, token } = useCustomerAuth();
   const { products, loading: productsLoading, error: productsError } = useProducts();
   const { createOrder, loading: orderLoading, error: orderError } = useCreateOrder();
 
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [selectedProductId, setSelectedProductId] = useState<string>('');
-  const [selectedQuantity, setSelectedQuantity] = useState<number>(1);
+  const [selectedQuantityInput, setSelectedQuantityInput] = useState<string>('');
 
   const [deliveryDate, setDeliveryDate] = useState<string>('');
   const [paymentMethod, setPaymentMethod] = useState<string>('CREDIT');
   const [notes, setNotes] = useState<string>('');
+  const [financial, setFinancial] = useState<{
+    limit: number;
+    used: number;
+    available: number;
+  } | null>(null);
+
+  useEffect(() => {
+    // Regra operacional: pedido feito hoje entrega no dia seguinte (D+1).
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const yyyy = tomorrow.getFullYear();
+    const mm = String(tomorrow.getMonth() + 1).padStart(2, '0');
+    const dd = String(tomorrow.getDate()).padStart(2, '0');
+    setDeliveryDate(`${yyyy}-${mm}-${dd}`);
+  }, []);
+
+  const parsePositiveInteger = (value: string): number | null => {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return null;
+    }
+    const parsed = Number.parseInt(trimmed, 10);
+    if (!Number.isFinite(parsed) || parsed <= 0) {
+      return null;
+    }
+    return parsed;
+  };
 
   const handleAddToCart = () => {
     if (!selectedProductId) {
       alert('Selecione um produto');
+      return;
+    }
+
+    const selectedQuantity = parsePositiveInteger(selectedQuantityInput);
+    if (!selectedQuantity) {
+      alert('Informe uma quantidade válida (ex: 10)');
       return;
     }
 
@@ -49,7 +84,7 @@ export function CreateOrderForm() {
 
     // Resetar seleção
     setSelectedProductId('');
-    setSelectedQuantity(1);
+    setSelectedQuantityInput('');
   };
 
   const handleRemoveFromCart = (productId: number) => {
@@ -73,6 +108,78 @@ export function CreateOrderForm() {
     }, 0);
   };
 
+  const parseMoney = (value?: string) => {
+    const parsed = Number.parseFloat(String(value ?? '0'));
+    return Number.isFinite(parsed) ? parsed : 0;
+  };
+
+  useEffect(() => {
+    const bootstrapFinancial = async () => {
+      if (!token) {
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/customers/me/', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!response.ok) {
+          return;
+        }
+
+        const data = await response.json();
+        setFinancial({
+          limit: parseMoney(data.financial_limit ?? data.credit_limit),
+          used: parseMoney(data.financial_used ?? data.current_balance),
+          available: parseMoney(data.financial_available ?? data.available_credit),
+        });
+      } catch (err) {
+        console.error('Erro ao carregar resumo financeiro do cliente:', err);
+      }
+    };
+
+    void bootstrapFinancial();
+  }, [token]);
+
+  const financialLimit =
+    financial?.limit ?? parseMoney(customer?.financial_limit ?? customer?.credit_limit);
+  const financialUsed =
+    financial?.used ?? parseMoney(customer?.financial_used ?? customer?.current_balance);
+  const availableCredit =
+    financial?.available ?? parseMoney(customer?.financial_available ?? customer?.available_credit);
+
+  const orderTotal = calculateTotal();
+  const exceedsAvailableCredit = paymentMethod === 'CREDIT' && orderTotal > availableCredit;
+  const projectedAvailable = Math.max(
+    0,
+    availableCredit - (paymentMethod === 'CREDIT' ? orderTotal : 0)
+  );
+  const isSubmitDisabled = orderLoading || cartItems.length === 0 || exceedsAvailableCredit;
+
+  const formatCurrency = (value: number) => {
+    return `R$ ${value.toFixed(2).replace('.', ',')}`;
+  };
+
+  const formatDeliveryDateLabel = (value: string) => {
+    if (!value) {
+      return '';
+    }
+    const [year, month, day] = value.split('-').map(Number);
+    const date = new Date(year, month - 1, day);
+    const weekday = new Intl.DateTimeFormat('pt-BR', { weekday: 'short' })
+      .format(date)
+      .replace('.', '');
+    const dd = String(day).padStart(2, '0');
+    const mm = String(month).padStart(2, '0');
+    const yy = String(year).slice(-2);
+    return `${weekday}, ${dd}/${mm}/${yy}`;
+  };
+
   const handleSubmitOrder = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -87,9 +194,19 @@ export function CreateOrderForm() {
       return;
     }
 
+    if (exceedsAvailableCredit) {
+      alert(
+        `Pedido excede o limite disponível. Total: R$ ${orderTotal.toFixed(2)} | Disponível: R$ ${availableCredit.toFixed(2)}`
+      );
+      return;
+    }
+
     // Preparar payload
+    const [year, month, day] = deliveryDate.split('-').map(Number);
+    const scheduledDelivery = new Date(year, month - 1, day, 8, 0, 0);
+
     const payload: CreateOrderPayload = {
-      delivery_date: new Date(deliveryDate).toISOString(),
+      delivery_date: scheduledDelivery.toISOString(),
       payment_method: paymentMethod,
       notes,
       items: cartItems.map((item) => ({
@@ -123,6 +240,29 @@ export function CreateOrderForm() {
       <h2>Criar Novo Pedido</h2>
 
       <div className={styles.content}>
+        <div className={styles.financialSection}>
+          <h3>Resumo Financeiro</h3>
+          <div className={styles.financialGrid}>
+            <div className={styles.financialCard}>
+              <label>Saldo Limite</label>
+              <p>{formatCurrency(financialLimit)}</p>
+            </div>
+            <div className={styles.financialCard}>
+              <label>Saldo Utilizado</label>
+              <p>{formatCurrency(financialUsed)}</p>
+            </div>
+            <div className={styles.financialCard}>
+              <label>Saldo Disponível</label>
+              <p>{formatCurrency(availableCredit)}</p>
+            </div>
+          </div>
+          {paymentMethod === 'CREDIT' && cartItems.length > 0 && (
+            <p className={styles.financialProjection}>
+              Após este pedido: <strong>{formatCurrency(projectedAvailable)}</strong>
+            </p>
+          )}
+        </div>
+
         {/* Seção de seleção de produtos */}
         <div className={styles.section}>
           <h3>📦 Selecionar Produtos</h3>
@@ -141,12 +281,18 @@ export function CreateOrderForm() {
             </select>
 
             <input
-              type="number"
-              min="1"
-              value={selectedQuantity}
-              onChange={(e) => setSelectedQuantity(parseInt(e.target.value) || 1)}
-              className={styles.input}
-              placeholder="Quantidade"
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              value={selectedQuantityInput}
+              onChange={(e) => {
+                const next = e.target.value.replace(/\D/g, '');
+                setSelectedQuantityInput(next);
+              }}
+              onFocus={(e) => e.currentTarget.select()}
+              className={styles.quantitySelectorInput}
+              placeholder="Ex: 10"
+              aria-label="Quantidade"
             />
 
             <button onClick={handleAddToCart} className={styles.buttonAdd} type="button">
@@ -227,11 +373,11 @@ export function CreateOrderForm() {
             <div className={styles.formGroup}>
               <label>Data de Entrega *</label>
               <input
-                type="datetime-local"
-                value={deliveryDate}
-                onChange={(e) => setDeliveryDate(e.target.value)}
-                className={styles.input}
-                required
+                type="text"
+                value={formatDeliveryDateLabel(deliveryDate)}
+                className={styles.dateAutoInput}
+                readOnly
+                aria-label="Data de entrega automática"
               />
             </div>
 
@@ -270,6 +416,13 @@ export function CreateOrderForm() {
           {/* Erro de criação */}
           {orderError && <div className={styles.error}>Erro: {orderError}</div>}
 
+          {exceedsAvailableCredit && (
+            <div className={styles.error}>
+              Limite insuficiente para este pedido. Disponível: R$ {availableCredit.toFixed(2)} |
+              Total: R$ {orderTotal.toFixed(2)}
+            </div>
+          )}
+
           {/* Botões de ação */}
           <div className={styles.actions}>
             <button
@@ -280,11 +433,7 @@ export function CreateOrderForm() {
               Cancelar
             </button>
 
-            <button
-              type="submit"
-              className={styles.buttonSubmit}
-              disabled={orderLoading || cartItems.length === 0}
-            >
+            <button type="submit" className={styles.buttonSubmit} disabled={isSubmitDisabled}>
               {orderLoading ? 'Criando pedido...' : 'Criar Pedido'}
             </button>
           </div>

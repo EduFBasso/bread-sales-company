@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAdminCustomers } from '../../hooks/useAdminCustomers';
 import { generateRandomPassword, validatePassword } from '../../utils/passwordGenerator';
+import { AdminPasswordDialog } from './AdminPasswordDialog';
 import styles from './AdminPages.module.css';
 
 interface CustomerDetailModalProps {
@@ -20,12 +21,20 @@ export const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
   const [isActionLoading, setIsActionLoading] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
+  const [securityDialogOpen, setSecurityDialogOpen] = useState(false);
+  const [securityDialogTitle, setSecurityDialogTitle] = useState('');
+  const [securityDialogDescription, setSecurityDialogDescription] = useState('');
+  const [securityDialogConfirmLabel, setSecurityDialogConfirmLabel] = useState('');
+  const [pendingSecureAction, setPendingSecureAction] = useState<
+    'approve' | 'set-password' | 'view-password' | 'copy-password' | 'share-password' | null
+  >(null);
 
   // Campos de aprovação
   const [creditLimit, setCreditLimit] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [passwordGenerated, setPasswordGenerated] = useState('');
   const [copiedToClipboard, setCopiedToClipboard] = useState(false);
+  const [lastApprovedPassword, setLastApprovedPassword] = useState<string | null>(null);
 
   useEffect(() => {
     if (isOpen && customerId) {
@@ -36,6 +45,9 @@ export const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
       setShowPassword(false);
       setPasswordGenerated(generateRandomPassword());
       setCopiedToClipboard(false);
+      setLastApprovedPassword(null);
+      setSecurityDialogOpen(false);
+      setPendingSecureAction(null);
     }
   }, [isOpen, customerId, fetchCustomerDetail]);
 
@@ -43,10 +55,26 @@ export const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
     return null;
   }
 
-  const handleApprove = async () => {
-    // Validar campos
+  const parseMoney = (value?: string | number | null) => {
+    if (value === undefined || value === null || value === '') {
+      return 0;
+    }
+    const parsed = typeof value === 'string' ? Number.parseFloat(value) : value;
+    return Number.isFinite(parsed) ? parsed : 0;
+  };
+
+  const formatCurrency = (value?: string | number | null) => {
+    return `R$ ${parseMoney(value).toFixed(2).replace('.', ',')}`;
+  };
+
+  const executeApprove = async (adminPassword: string) => {
     if (!creditLimit || !passwordGenerated) {
       setActionError('Limite de crédito é obrigatório');
+      return;
+    }
+
+    if (!adminPassword) {
+      setActionError('Digite a senha do dono para aprovar o cliente');
       return;
     }
 
@@ -71,7 +99,7 @@ export const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
         throw new Error('Token não encontrado');
       }
 
-      const response = await fetch(`http://localhost:8000/api/customers/${customerId}/approve`, {
+      const response = await fetch(`/api/customers/${customerId}/approve`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -81,6 +109,7 @@ export const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
           credit_limit: creditLimit,
           password: passwordGenerated,
           confirm_password: passwordGenerated,
+          admin_password: adminPassword,
         }),
       });
 
@@ -89,11 +118,12 @@ export const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
         throw new Error(data.detail || 'Erro ao aprovar cliente');
       }
 
-      setActionSuccess(`✅ Cliente aprovado! Senha: ${passwordGenerated}`);
-      setTimeout(() => {
-        onCustomerUpdated();
-        onClose();
-      }, 2000);
+      setLastApprovedPassword(passwordGenerated);
+      setActionSuccess('✅ Cliente aprovado! Agora você pode copiar ou compartilhar a senha.');
+      setSecurityDialogOpen(false);
+      setPendingSecureAction(null);
+      onCustomerUpdated();
+      await fetchCustomerDetail(customerId);
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Erro ao aprovar cliente';
       setActionError(errorMsg);
@@ -107,15 +137,212 @@ export const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
     const newPassword = generateRandomPassword();
     setPasswordGenerated(newPassword);
     setCopiedToClipboard(false);
+    setActionSuccess(null);
+  };
+
+  const verifyOwnerPassword = async (adminPassword: string) => {
+    const token = localStorage.getItem('bread_admin_token');
+    if (!token) {
+      throw new Error('Token não encontrado');
+    }
+
+    const response = await fetch('/api/customers/verify-admin-password', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ admin_password: adminPassword }),
+    });
+
+    if (!response.ok) {
+      const data = await response.json();
+      throw new Error(data.detail || 'Erro ao confirmar senha do dono');
+    }
   };
 
   const handleCopyPassword = async () => {
+    const passwordToCopy = lastApprovedPassword || passwordGenerated;
+    if (!passwordToCopy) {
+      setActionError('Nenhuma senha disponível para copiar');
+      return;
+    }
+
     try {
-      await navigator.clipboard.writeText(passwordGenerated);
+      await navigator.clipboard.writeText(passwordToCopy);
       setCopiedToClipboard(true);
       setTimeout(() => setCopiedToClipboard(false), 2000);
     } catch (err) {
       setActionError('Erro ao copiar para clipboard');
+    }
+  };
+
+  const handleSharePassword = () => {
+    const passwordToShare = lastApprovedPassword || passwordGenerated;
+    if (!passwordToShare) {
+      setActionError('Atualize ou aprove com uma nova senha antes de compartilhar');
+      return;
+    }
+
+    if (!customer?.phone) {
+      setActionError('Cliente sem telefone para compartilhamento via WhatsApp');
+      return;
+    }
+
+    const digitsPhone = customer.phone.replace(/\D/g, '');
+    const cleanPhone = digitsPhone.startsWith('55') ? digitsPhone : `55${digitsPhone}`;
+    const encodedMessage = encodeURIComponent(passwordToShare);
+    const appUrl = `whatsapp://send?phone=${cleanPhone}&text=${encodedMessage}`;
+    const webUrl = `https://web.whatsapp.com/send?phone=${cleanPhone}&text=${encodedMessage}`;
+
+    // Tenta abrir o app; se não houver handler, cai para o WhatsApp Web.
+    let appOpened = false;
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        appOpened = true;
+      }
+    };
+
+    document.addEventListener('visibilitychange', onVisibilityChange, { once: true });
+    window.location.href = appUrl;
+
+    window.setTimeout(() => {
+      if (!appOpened) {
+        window.open(webUrl, '_blank', 'noopener,noreferrer');
+      }
+    }, 1200);
+  };
+
+  const executeSetPassword = async (adminPassword: string) => {
+    if (!adminPassword) {
+      setActionError('Digite a senha do dono para alterar a senha do cliente');
+      return;
+    }
+
+    setIsActionLoading(true);
+    setActionError(null);
+    try {
+      const token = localStorage.getItem('bread_admin_token');
+      if (!token) {
+        throw new Error('Token não encontrado');
+      }
+
+      const response = await fetch(`/api/customers/${customerId}/set-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          password: passwordGenerated,
+          confirm_password: passwordGenerated,
+          admin_password: adminPassword,
+        }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.detail || 'Erro ao atualizar senha do cliente');
+      }
+
+      setLastApprovedPassword(passwordGenerated);
+      setActionSuccess('✅ Nova senha definida com sucesso.');
+      setSecurityDialogOpen(false);
+      setPendingSecureAction(null);
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Erro ao atualizar senha do cliente');
+    } finally {
+      setIsActionLoading(false);
+    }
+  };
+
+  const openSecurityDialog = (
+    action: 'approve' | 'set-password' | 'view-password' | 'copy-password' | 'share-password'
+  ) => {
+    setActionError(null);
+    setPendingSecureAction(action);
+
+    if (action === 'approve') {
+      setSecurityDialogTitle('Confirmar Aprovação');
+      setSecurityDialogDescription('Digite a senha do dono para aprovar este cadastro.');
+      setSecurityDialogConfirmLabel('Confirmar Aprovação');
+    } else if (action === 'set-password') {
+      setSecurityDialogTitle('Confirmar Nova Senha');
+      setSecurityDialogDescription('Digite a senha do dono para atualizar a senha do cliente.');
+      setSecurityDialogConfirmLabel('Atualizar Senha');
+    } else if (action === 'view-password') {
+      setSecurityDialogTitle('Confirmar Visualização');
+      setSecurityDialogDescription('Digite a senha do dono para visualizar a senha do cliente.');
+      setSecurityDialogConfirmLabel('Visualizar Senha');
+    } else if (action === 'copy-password') {
+      setSecurityDialogTitle('Confirmar Cópia');
+      setSecurityDialogDescription('Digite a senha do dono para copiar a senha do cliente.');
+      setSecurityDialogConfirmLabel('Copiar Senha');
+    } else {
+      setSecurityDialogTitle('Confirmar Compartilhamento');
+      setSecurityDialogDescription('Digite a senha do dono para compartilhar a senha no WhatsApp.');
+      setSecurityDialogConfirmLabel('Compartilhar');
+    }
+
+    setSecurityDialogOpen(true);
+  };
+
+  const handleSecurityConfirm = async (adminPassword: string) => {
+    if (pendingSecureAction === 'approve') {
+      await executeApprove(adminPassword);
+      return;
+    }
+
+    if (pendingSecureAction === 'set-password') {
+      await executeSetPassword(adminPassword);
+      return;
+    }
+
+    if (pendingSecureAction === 'view-password') {
+      try {
+        setIsActionLoading(true);
+        setActionError(null);
+        await verifyOwnerPassword(adminPassword);
+        setShowPassword((prev) => !prev);
+        setSecurityDialogOpen(false);
+        setPendingSecureAction(null);
+      } catch (err) {
+        setActionError(err instanceof Error ? err.message : 'Erro ao confirmar senha do dono');
+      } finally {
+        setIsActionLoading(false);
+      }
+      return;
+    }
+
+    if (pendingSecureAction === 'copy-password') {
+      try {
+        setIsActionLoading(true);
+        setActionError(null);
+        await verifyOwnerPassword(adminPassword);
+        await handleCopyPassword();
+        setSecurityDialogOpen(false);
+        setPendingSecureAction(null);
+      } catch (err) {
+        setActionError(err instanceof Error ? err.message : 'Erro ao confirmar senha do dono');
+      } finally {
+        setIsActionLoading(false);
+      }
+      return;
+    }
+
+    if (pendingSecureAction === 'share-password') {
+      try {
+        setIsActionLoading(true);
+        setActionError(null);
+        await verifyOwnerPassword(adminPassword);
+        handleSharePassword();
+        setSecurityDialogOpen(false);
+        setPendingSecureAction(null);
+      } catch (err) {
+        setActionError(err instanceof Error ? err.message : 'Erro ao confirmar senha do dono');
+      } finally {
+        setIsActionLoading(false);
+      }
     }
   };
 
@@ -146,12 +373,16 @@ export const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
               <h3>Informações do Cliente</h3>
               <div className={styles.detailGrid}>
                 <div className={styles.detailItem}>
+                  <label>Nome Comercial</label>
+                  <p>{customer.company_name || customer.nickname || '-'}</p>
+                </div>
+                <div className={styles.detailItem}>
                   <label>Apelido</label>
                   <p>{customer.nickname || '-'}</p>
                 </div>
                 <div className={styles.detailItem}>
                   <label>Tipo</label>
-                  <p>{customer.customer_type === 'FISICA' ? 'Pessoa Física' : 'Pessoa Jurídica'}</p>
+                  <p>{customer.customer_type === 'PF' ? 'Pessoa Física' : 'Pessoa Jurídica'}</p>
                 </div>
                 <div className={styles.detailItem}>
                   <label>CPF/CNPJ</label>
@@ -159,7 +390,56 @@ export const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                 </div>
                 <div className={styles.detailItem}>
                   <label>Telefone</label>
-                  <p>{customer.phone || '-'}</p>
+                  <p>
+                    {customer.phone || '-'}
+                    {customer.phone && (
+                      <a
+                        href={`https://wa.me/55${customer.phone.replace(/\D/g, '')}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className={styles.inlineActionLink}
+                      >
+                        WhatsApp
+                      </a>
+                    )}
+                  </p>
+                </div>
+                <div className={styles.detailItem}>
+                  <label>Endereço</label>
+                  <p>
+                    {[
+                      customer.street,
+                      customer.number,
+                      customer.complement,
+                      customer.neighborhood,
+                      customer.city,
+                      customer.state,
+                      customer.zip_code,
+                    ]
+                      .filter(Boolean)
+                      .join(', ') || '-'}
+                    {customer.street && (
+                      <a
+                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                          [
+                            customer.street,
+                            customer.number,
+                            customer.neighborhood,
+                            customer.city,
+                            customer.state,
+                            customer.zip_code,
+                          ]
+                            .filter(Boolean)
+                            .join(', ')
+                        )}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className={styles.inlineActionLink}
+                      >
+                        Ver no mapa
+                      </a>
+                    )}
+                  </p>
                 </div>
                 <div className={styles.detailItem}>
                   <label>Status</label>
@@ -182,19 +462,20 @@ export const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
 
             {/* Balance Section - Renamed to Debt */}
             <div className={styles.detailSection}>
-              <h3>Dívida</h3>
+              <h3>Resumo Financeiro</h3>
               <div className={styles.balanceDetail}>
                 <div className={styles.balanceItem}>
-                  <label>Dívida Atual</label>
+                  <label>Saldo Limite</label>
+                  <p className={styles.balanceValue}>{formatCurrency(customer.financial_limit)}</p>
+                </div>
+                <div className={styles.balanceItem}>
+                  <label>Saldo Utilizado</label>
+                  <p className={styles.balanceValue}>{formatCurrency(customer.financial_used)}</p>
+                </div>
+                <div className={styles.balanceItem}>
+                  <label>Saldo Disponível</label>
                   <p className={styles.balanceValue}>
-                    R${' '}
-                    {Math.abs(
-                      typeof customer.current_balance === 'string'
-                        ? parseFloat(customer.current_balance)
-                        : customer.current_balance || 0
-                    )
-                      .toFixed(2)
-                      .replace('.', ',')}
+                    {formatCurrency(customer.financial_available ?? customer.available_credit)}
                   </p>
                 </div>
               </div>
@@ -220,67 +501,106 @@ export const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
 
                   <div className={styles.formGroup}>
                     <label>Senha de Acesso*</label>
-                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                      <div style={{ flex: 1, position: 'relative' }}>
-                        <input
-                          type={showPassword ? 'text' : 'password'}
-                          value={passwordGenerated}
-                          readOnly
-                          placeholder="Senha será gerada..."
-                          style={{ width: '100%', paddingRight: '40px' }}
-                          className={styles.input}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowPassword(!showPassword)}
-                          style={{
-                            position: 'absolute',
-                            right: '10px',
-                            top: '50%',
-                            transform: 'translateY(-50%)',
-                            background: 'none',
-                            border: 'none',
-                            cursor: 'pointer',
-                            fontSize: '18px',
-                          }}
-                          disabled={isActionLoading}
-                        >
-                          {showPassword ? '👁️' : '👁️‍🗨️'}
-                        </button>
-                      </div>
+                    <div className={styles.passwordInlineRow}>
+                      <input
+                        type={showPassword ? 'text' : 'password'}
+                        value={passwordGenerated}
+                        readOnly
+                        placeholder="Senha será gerada..."
+                        className={styles.passwordReadOnlyInput}
+                      />
                       <button
                         type="button"
-                        onClick={handleCopyPassword}
+                        onClick={() => openSecurityDialog('view-password')}
+                        className={styles.inlinePasswordAction}
+                        disabled={isActionLoading}
+                      >
+                        👁️
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleGenerateNewPassword}
+                        className={styles.inlinePasswordAction}
+                        disabled={isActionLoading}
+                      >
+                        🔄 Gerar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => openSecurityDialog('copy-password')}
+                        className={styles.inlinePasswordAction}
                         disabled={!passwordGenerated || isActionLoading}
-                        style={{
-                          padding: '8px 12px',
-                          background: copiedToClipboard ? '#4caf50' : '#2196f3',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '4px',
-                          cursor: 'pointer',
-                          fontSize: '14px',
-                        }}
                       >
                         {copiedToClipboard ? '✓ Copiado' : '📋 Copiar'}
                       </button>
                       <button
                         type="button"
-                        onClick={handleGenerateNewPassword}
-                        disabled={isActionLoading}
-                        style={{
-                          padding: '8px 12px',
-                          background: '#ff9800',
-                          color: 'white',
-                          border: 'none',
-                          borderRadius: '4px',
-                          cursor: 'pointer',
-                          fontSize: '14px',
-                        }}
+                        onClick={() => openSecurityDialog('share-password')}
+                        className={styles.inlinePasswordAction}
+                        disabled={isActionLoading || !customer.phone}
                       >
-                        🔄 Gerar
+                        💬 WhatsApp
                       </button>
                     </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {customer.status === 'APROVADO' && (
+              <div className={styles.detailSection}>
+                <h3>🔐 Credenciais de Acesso</h3>
+                <div className={styles.approvalForm}>
+                  <div className={styles.formGroup}>
+                    <label>Senha do Cliente</label>
+                    <div className={styles.passwordInlineRow}>
+                      <input
+                        type={showPassword ? 'text' : 'password'}
+                        value={passwordGenerated}
+                        readOnly
+                        className={styles.passwordReadOnlyInput}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => openSecurityDialog('view-password')}
+                        className={styles.inlinePasswordAction}
+                      >
+                        👁️
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => openSecurityDialog('copy-password')}
+                        className={styles.inlinePasswordAction}
+                      >
+                        {copiedToClipboard ? '✓ Copiado' : '📋 Copiar'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => openSecurityDialog('share-password')}
+                        className={styles.inlinePasswordAction}
+                        disabled={isActionLoading || !customer.phone}
+                      >
+                        💬 WhatsApp
+                      </button>
+                    </div>
+                  </div>
+                  <div className={styles.sectionActions}>
+                    <button
+                      className={styles.approveButton}
+                      type="button"
+                      onClick={() => openSecurityDialog('set-password')}
+                      disabled={isActionLoading}
+                    >
+                      {isActionLoading ? '⏳ Atualizando...' : '✅ Atualizar Senha'}
+                    </button>
+                    <button
+                      className={styles.closeButtonModal}
+                      type="button"
+                      onClick={onClose}
+                      disabled={isActionLoading}
+                    >
+                      Fechar
+                    </button>
                   </div>
                 </div>
               </div>
@@ -295,27 +615,24 @@ export const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
               {customer.status === 'PENDENTE' && (
                 <button
                   className={styles.approveButton}
-                  onClick={handleApprove}
+                  onClick={() => openSecurityDialog('approve')}
                   disabled={isActionLoading}
                 >
                   {isActionLoading ? '⏳ Aprovando...' : '✅ Aprovar'}
                 </button>
               )}
-              {customer.status === 'APROVADO' && (
-                <p className={styles.blockedNote}>
-                  Para bloquear ou apagar, use o botão "🚫 Bloquear" na tabela
-                </p>
-              )}
               {customer.status === 'BLOQUEADO' && (
                 <p className={styles.blockedNote}>Cliente bloqueado - sem ações disponíveis</p>
               )}
-              <button
-                className={styles.closeButtonModal}
-                onClick={onClose}
-                disabled={isActionLoading}
-              >
-                Fechar
-              </button>
+              {customer.status !== 'APROVADO' && (
+                <button
+                  className={styles.closeButtonModal}
+                  onClick={onClose}
+                  disabled={isActionLoading}
+                >
+                  Fechar
+                </button>
+              )}
             </div>
           </div>
         ) : (
@@ -323,6 +640,17 @@ export const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
             <p>Cliente não encontrado.</p>
           </div>
         )}
+
+        <AdminPasswordDialog
+          isOpen={securityDialogOpen}
+          title={securityDialogTitle}
+          description={securityDialogDescription}
+          confirmLabel={securityDialogConfirmLabel}
+          isLoading={isActionLoading}
+          error={actionError}
+          onClose={() => setSecurityDialogOpen(false)}
+          onConfirm={handleSecurityConfirm}
+        />
       </div>
     </div>
   );

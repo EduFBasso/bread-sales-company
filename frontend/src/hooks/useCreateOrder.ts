@@ -46,7 +46,7 @@ export function useCreateOrder() {
         throw new Error('Usuário não autenticado');
       }
 
-      const response = await fetch('http://localhost:8000/api/customers/orders/create/', {
+      const response = await fetch('/api/customers/orders/create/', {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${token}`,

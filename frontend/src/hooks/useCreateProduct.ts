@@ -36,7 +36,7 @@ export function useCreateProduct(): UseCreateProductReturn {
         throw new Error('Admin não autenticado');
       }
 
-      const response = await fetch('http://localhost:8000/api/admin/products/', {
+      const response = await fetch('/api/admin/products/', {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${adminToken}`,

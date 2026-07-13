@@ -1,4 +1,6 @@
 from rest_framework import serializers
+from decimal import Decimal
+from django.db.models import Sum
 from .models import Product, Order, OrderItem
 
 class ProductSerializer(serializers.ModelSerializer):
@@ -143,6 +145,65 @@ class OrderCreateSerializer(serializers.ModelSerializer):
         if not value:
             raise serializers.ValidationError("O pedido deve conter pelo menos um item.")
         return value
+
+    def validate(self, data):
+        """
+        Regras de crédito para criação de pedido:
+        - Cliente precisa estar aprovado.
+        - Para pagamento CREDIT, o total do pedido não pode exceder o crédito disponível.
+        - O crédito disponível considera pedidos CREDIT ainda em aberto (não cancelados).
+        """
+        customer = self.context.get('customer')
+        if not customer:
+            return data
+
+        if customer.status != customer.ApprovalStatus.APPROVED:
+            raise serializers.ValidationError(
+                f"Cliente não está aprovado para fazer pedidos. Status atual: {customer.get_status_display()}"
+            )
+
+        if data.get('payment_method') != 'CREDIT':
+            return data
+
+        items_data = data.get('items', [])
+        if not items_data:
+            return data
+
+        product_ids = [item['product_id'] for item in items_data]
+        products = Product.objects.filter(id__in=product_ids, is_active=True)
+        products_map = {product.id: product for product in products}
+
+        missing_ids = [pid for pid in product_ids if pid not in products_map]
+        if missing_ids:
+            raise serializers.ValidationError(
+                f"Produtos inválidos ou inativos no pedido: {', '.join(str(pid) for pid in sorted(set(missing_ids)))}"
+            )
+
+        order_total = Decimal('0.00')
+        for item in items_data:
+            product = products_map[item['product_id']]
+            order_total += product.price * item['quantity']
+
+        used_credit = (
+            Order.objects.filter(customer=customer, payment_method='CREDIT')
+            .exclude(status='CANCELLED')
+            .aggregate(total=Sum('total_value'))['total']
+            or Decimal('0.00')
+        )
+        credit_limit = Decimal(str(customer.credit_limit or '0.00'))
+        available_credit = credit_limit - used_credit
+        if available_credit < Decimal('0.00'):
+            available_credit = Decimal('0.00')
+
+        if order_total > available_credit:
+            raise serializers.ValidationError(
+                (
+                    f"Pedido excede o limite disponível. Total do pedido: R$ {order_total:.2f}, "
+                    f"Disponível: R$ {available_credit:.2f}."
+                )
+            )
+
+        return data
 
     def create(self, validated_data):
         """Cria Order e OrderItems atomicamente"""

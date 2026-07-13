@@ -6,15 +6,27 @@ interface Customer {
   customer_type: string;
   phone: string;
   status: string;
+  company_name?: string;
+  zip_code?: string;
+  street?: string;
+  number?: string;
+  complement?: string;
+  neighborhood?: string;
+  city?: string;
+  state?: string;
+  credit_limit?: string;
   created_at?: string;
   user?: {
     id: number;
     username: string;
     email: string;
   };
-  company_name?: string;
   cnpj_cpf?: string;
   current_balance?: string;
+  available_credit?: string;
+  financial_limit?: string;
+  financial_used?: string;
+  financial_available?: string;
 }
 
 interface AdminStats {
@@ -59,7 +71,7 @@ export function useAdminCustomers(options?: UseAdminCustomersOptions) {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch('http://localhost:8000/api/admin/stats/', {
+      const response = await fetch('/api/admin/stats/', {
         method: 'GET',
         headers: getAuthHeaders(),
       });
@@ -87,7 +99,7 @@ export function useAdminCustomers(options?: UseAdminCustomersOptions) {
     setError(null);
 
     try {
-      const response = await fetch('http://localhost:8000/api/customers?status=PENDENTE', {
+      const response = await fetch('/api/customers?status=PENDENTE', {
         method: 'GET',
         headers: getAuthHeaders(),
       });
@@ -122,7 +134,7 @@ export function useAdminCustomers(options?: UseAdminCustomersOptions) {
       if (filters?.status) params.append('status', filters.status);
       if (filters?.search) params.append('nickname', filters.search);
 
-      const url = `http://localhost:8000/api/customers${params.toString() ? '?' + params.toString() : ''}`;
+      const url = `/api/customers${params.toString() ? '?' + params.toString() : ''}`;
       const response = await fetch(url, {
         method: 'GET',
         headers: getAuthHeaders(),
@@ -152,7 +164,7 @@ export function useAdminCustomers(options?: UseAdminCustomersOptions) {
     setError(null);
 
     try {
-      const response = await fetch(`http://localhost:8000/api/customers/${customerId}`, {
+      const response = await fetch(`/api/customers/${customerId}`, {
         method: 'GET',
         headers: getAuthHeaders(),
       });
@@ -177,7 +189,7 @@ export function useAdminCustomers(options?: UseAdminCustomersOptions) {
   const approveCustomer = useCallback(async (customerId: number, nickname: string) => {
     setError(null);
     try {
-      const response = await fetch(`http://localhost:8000/api/customers/${customerId}/approve`, {
+      const response = await fetch(`/api/customers/${customerId}/approve`, {
         method: 'POST',
         headers: getAuthHeaders(),
       });
@@ -206,7 +218,7 @@ export function useAdminCustomers(options?: UseAdminCustomersOptions) {
   const blockCustomer = useCallback(async (customerId: number, nickname: string) => {
     setError(null);
     try {
-      const response = await fetch(`http://localhost:8000/api/customers/${customerId}/block`, {
+      const response = await fetch(`/api/customers/${customerId}/block`, {
         method: 'POST',
         headers: getAuthHeaders(),
       });

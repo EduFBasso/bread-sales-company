@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { HomePage, RegisterPage, LoginPage, PendingPage, AdminPages, ClientPages } from './pages';
+import { HomePage, RegisterPage, PendingPage, AdminPages, ClientPages } from './pages';
 import { AdminLoginPage } from './pages/AdminPages/AdminLoginPage';
 import { CustomerLoginPage } from './pages/ClientPages/CustomerLoginPage';
 import { CustomerCreateOrderPage } from './pages/ClientPages/CustomerCreateOrderPage';
@@ -38,7 +38,7 @@ export default function App() {
 
         {/* Registro e Login */}
         <Route path="/register" element={<RegisterPage />} />
-        <Route path="/login" element={<LoginPage />} />
+        <Route path="/login" element={<CustomerLoginPage />} />
         <Route path="/customer/login" element={<CustomerLoginPage />} />
 
         {/* Pendente (aguardando aprovação) */}

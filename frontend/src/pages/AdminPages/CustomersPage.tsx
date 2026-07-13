@@ -11,7 +11,7 @@ interface CustomersPageProps {
 }
 
 export function CustomersPage({ initialFilter, onError, onSuccess }: CustomersPageProps) {
-  const { allCustomers, loading, error, fetchAllCustomers, approveCustomer } = useAdminCustomers({
+  const { allCustomers, loading, error, fetchAllCustomers } = useAdminCustomers({
     onError,
     onSuccess,
   });
@@ -41,13 +41,6 @@ export function CustomersPage({ initialFilter, onError, onSuccess }: CustomersPa
       return () => clearTimeout(timer);
     }
   }, [successMessage]);
-
-  const handleApprove = async (id: number, nickname: string) => {
-    const result = await approveCustomer(id, nickname);
-    if (result) {
-      setSuccessMessage(`✅ ${nickname} aprovado!`);
-    }
-  };
 
   const handleBlock = (id: number, nickname: string) => {
     setBlockCustomerData({ id, nickname, action: 'block' });
@@ -178,9 +171,9 @@ export function CustomersPage({ initialFilter, onError, onSuccess }: CustomersPa
                         {customer.status === 'PENDENTE' && (
                           <button
                             className={styles.approveButton}
-                            onClick={() => handleApprove(customer.id, customer.nickname)}
+                            onClick={() => handleOpenModal(customer.id)}
                           >
-                            ✅ Aprovar
+                            ✅ Aprovar (Detalhes)
                           </button>
                         )}
                         {customer.status === 'APROVADO' && (

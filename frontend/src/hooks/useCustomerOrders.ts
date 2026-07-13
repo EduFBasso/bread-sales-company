@@ -39,7 +39,7 @@ export function useCustomerOrders() {
         setLoading(true);
         setError(null);
 
-        const response = await fetch('http://localhost:8000/api/customers/orders/', {
+        const response = await fetch('/api/customers/orders/', {
           method: 'GET',
           headers: {
             Authorization: `Bearer ${token}`,

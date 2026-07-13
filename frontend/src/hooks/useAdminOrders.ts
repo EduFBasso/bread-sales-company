@@ -58,7 +58,7 @@ export function useAdminOrders(filters?: {
         if (filters?.page_size) params.append('page_size', filters.page_size.toString());
 
         const queryString = params.toString();
-        const url = `http://localhost:8000/api/admin/orders/${queryString ? '?' + queryString : ''}`;
+        const url = `/api/admin/orders/${queryString ? '?' + queryString : ''}`;
 
         const response = await fetch(url, {
           headers: {
