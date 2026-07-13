@@ -1,14 +1,16 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCustomerAuth } from '../../hooks';
 import { BalanceCard } from '../../components/BalanceCard';
 import { OrdersList } from '../../components/OrdersList';
 import { TransactionHistory } from '../../components/TransactionHistory';
+import { SmartSection } from '../../components/SmartSection';
 import styles from './ClientPages.module.css';
 
 export function ClientPages() {
   const navigate = useNavigate();
   const { customer, isLoading, logout } = useCustomerAuth();
+  const [openSection, setOpenSection] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isLoading && !customer) {
@@ -26,53 +28,103 @@ export function ClientPages() {
   };
 
   if (!customer) {
-    return null;
+    return <div className={styles.container}>Redirecionando para login...</div>;
   }
+
+  const statusLabel = customer.status === 'APPROVED' ? 'APROVADO' : customer.status;
+  const customerTypeLabel = customer.customer_type === 'PF' ? 'Pessoa Física' : 'Pessoa Jurídica';
+  const fullAddress = [
+    customer.street,
+    customer.number,
+    customer.complement,
+    customer.neighborhood,
+    customer.city,
+    customer.state,
+    customer.zip_code,
+  ]
+    .filter(Boolean)
+    .join(', ');
+  const toggleSection = (sectionId: string) => {
+    setOpenSection((prev) => (prev === sectionId ? null : sectionId));
+  };
 
   return (
     <div className={styles.container}>
       <header className={styles.header}>
         <div className={styles.headerContent}>
-          <h1>🥖 Minha Conta</h1>
-          <button onClick={handleLogout} className={styles.logoutButton}>
-            Sair
-          </button>
+          <div className={styles.headerMainRow}>
+            <h1>{customer.nickname}</h1>
+            <button onClick={handleLogout} className={styles.logoutButton}>
+              Sair
+            </button>
+          </div>
+          <div className={styles.headerStatusRow}>
+            <span className={styles.headerStatusLabel}>Status:</span>
+            <strong className={styles.headerStatusValue}>{statusLabel}</strong>
+          </div>
         </div>
       </header>
 
       <main className={styles.main}>
-        <section className={styles.welcomeSection}>
-          <h2>Bem-vindo, {customer.nickname}!</h2>
-          <p className={styles.subtitle}>
-            Status: <strong>{customer.status}</strong>
-          </p>
-        </section>
-
-        <section className={styles.section}>
-          <h3>📋 Informações da Conta</h3>
+        <SmartSection
+          title="Informações da Conta"
+          stickyWhenOpen
+          isOpen={openSection === 'account'}
+          onToggle={() => toggleSection('account')}
+        >
           <div className={styles.infoGrid}>
+            {customer.company_name && (
+              <div className={styles.infoItem}>
+                <label>Nome Comercial</label>
+                <p>{customer.company_name}</p>
+              </div>
+            )}
             <div className={styles.infoItem}>
               <label>Apelido</label>
               <p>{customer.nickname}</p>
             </div>
             <div className={styles.infoItem}>
               <label>Tipo</label>
-              <p>{customer.customer_type === 'PF' ? 'Pessoa Física' : 'Pessoa Jurídica'}</p>
+              <p>{customerTypeLabel}</p>
             </div>
+            {customer.cnpj_cpf && (
+              <div className={styles.infoItem}>
+                <label>CPF/CNPJ</label>
+                <p>{customer.cnpj_cpf}</p>
+              </div>
+            )}
             {customer.phone && (
               <div className={styles.infoItem}>
                 <label>Telefone</label>
                 <p>{customer.phone}</p>
               </div>
             )}
+            {fullAddress && (
+              <div className={styles.infoItem}>
+                <label>Endereço</label>
+                <p>{fullAddress}</p>
+              </div>
+            )}
           </div>
-        </section>
+        </SmartSection>
 
-        {/* Balance & Credit Section */}
-        <BalanceCard />
+        <SmartSection
+          title="Resumo Financeiro"
+          stickyWhenOpen
+          isOpen={openSection === 'financial'}
+          onToggle={() => toggleSection('financial')}
+        >
+          <BalanceCard showHeader={false} />
+        </SmartSection>
 
-        {/* Orders List Section */}
-        <OrdersList />
+        <SmartSection
+          title="Meus Pedidos"
+          stickyWhenOpen
+          isOpen={openSection === 'orders'}
+          onToggle={() => toggleSection('orders')}
+        >
+          <OrdersList showHeader={false} isExpanded={openSection === 'orders'} />
+        </SmartSection>
 
         <div className={styles.newOrderButton}>
           <button
@@ -83,18 +135,14 @@ export function ClientPages() {
           </button>
         </div>
 
-        {/* Transaction History Section */}
-        <TransactionHistory />
-
-        <section className={styles.section}>
-          <h3>🛠️ Próximas Funcionalidades</h3>
-          <ul className={styles.featureList}>
-            <li>🛒 Fazer Novo Pedido</li>
-            <li>📊 Relatórios Personalizados</li>
-            <li>⚙️ Configurações da Conta</li>
-            <li>🔔 Notificações de Pedidos</li>
-          </ul>
-        </section>
+        <SmartSection
+          title="Histórico de Pagamentos"
+          stickyWhenOpen
+          isOpen={openSection === 'transactions'}
+          onToggle={() => toggleSection('transactions')}
+        >
+          <TransactionHistory showHeader={false} />
+        </SmartSection>
       </main>
     </div>
   );

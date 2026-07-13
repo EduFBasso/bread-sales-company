@@ -17,10 +17,10 @@ export function ProtectedRoute({ children, requiredRole = 'admin' }: ProtectedRo
   }
 
   if (requiredRole === 'customer') {
-    const customerToken = localStorage.getItem('bread_token');
+    const customerToken = localStorage.getItem('bread_customer_token');
 
     if (!customerToken) {
-      return <Navigate to="/login" replace />;
+      return <Navigate to="/customer/login" replace />;
     }
 
     return <>{children}</>;

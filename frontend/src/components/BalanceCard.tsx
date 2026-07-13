@@ -1,7 +1,11 @@
 import { useCustomerDashboard } from '../hooks/useCustomerDashboard';
 import styles from './BalanceCard.module.css';
 
-export function BalanceCard() {
+interface BalanceCardProps {
+  showHeader?: boolean;
+}
+
+export function BalanceCard({ showHeader = true }: BalanceCardProps) {
   const { data } = useCustomerDashboard();
 
   if (!data) {
@@ -16,9 +20,11 @@ export function BalanceCard() {
 
   return (
     <div className={styles.container}>
-      <div className={styles.header}>
-        <h3>💰 Resumo Financeiro</h3>
-      </div>
+      {showHeader && (
+        <div className={styles.header}>
+          <h3>💰 Resumo Financeiro</h3>
+        </div>
+      )}
 
       <div className={styles.content}>
         <div className={styles.item}>

@@ -5,8 +5,18 @@ interface CustomerData {
   customer_id?: number;
   nickname: string;
   customer_type: string;
+  company_name?: string;
+  cnpj_cpf?: string;
   phone?: string;
   status: string;
+  zip_code?: string;
+  street?: string;
+  number?: string;
+  complement?: string;
+  neighborhood?: string;
+  city?: string;
+  state?: string;
+  created_at?: string;
   current_balance?: string;
   financial_limit?: string;
   financial_used?: string;

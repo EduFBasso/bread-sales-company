@@ -1,15 +1,30 @@
 import { useCustomerTransactions } from '../hooks/useCustomerTransactions';
 import styles from './TransactionHistory.module.css';
 
-export function TransactionHistory() {
+interface TransactionHistoryProps {
+  showHeader?: boolean;
+}
+
+export function TransactionHistory({ showHeader = true }: TransactionHistoryProps) {
   const { transactions, loading, error } = useCustomerTransactions();
+
+  const renderHeader = (count?: number) => {
+    if (!showHeader) {
+      return null;
+    }
+
+    return (
+      <div className={styles.header}>
+        <h3>💳 Histórico de Pagamentos</h3>
+        {typeof count === 'number' && <span className={styles.count}>{count}</span>}
+      </div>
+    );
+  };
 
   if (loading) {
     return (
       <div className={styles.container}>
-        <div className={styles.header}>
-          <h3>💳 Histórico de Pagamentos</h3>
-        </div>
+        {renderHeader()}
         <div className={styles.skeleton} />
       </div>
     );
@@ -18,9 +33,7 @@ export function TransactionHistory() {
   if (error) {
     return (
       <div className={styles.container}>
-        <div className={styles.header}>
-          <h3>💳 Histórico de Pagamentos</h3>
-        </div>
+        {renderHeader()}
         <div className={styles.errorMessage}>{error}</div>
       </div>
     );
@@ -29,9 +42,7 @@ export function TransactionHistory() {
   if (transactions.length === 0) {
     return (
       <div className={styles.container}>
-        <div className={styles.header}>
-          <h3>💳 Histórico de Pagamentos</h3>
-        </div>
+        {renderHeader()}
         <div className={styles.emptyState}>
           <p>Nenhuma transação registrada</p>
           <small>Suas transações aparecerão aqui</small>
@@ -60,10 +71,7 @@ export function TransactionHistory() {
 
   return (
     <div className={styles.container}>
-      <div className={styles.header}>
-        <h3>💳 Histórico de Pagamentos</h3>
-        <span className={styles.count}>{transactions.length}</span>
-      </div>
+      {renderHeader(transactions.length)}
 
       <div className={styles.table}>
         <div className={styles.tableHeader}>

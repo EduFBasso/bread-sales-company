@@ -1,15 +1,49 @@
+import { useEffect, useRef } from 'react';
 import { useCustomerOrders } from '../hooks/useCustomerOrders';
 import styles from './OrdersList.module.css';
 
-export function OrdersList() {
+interface OrdersListProps {
+  showHeader?: boolean;
+  isExpanded?: boolean;
+}
+
+export function OrdersList({ showHeader = true, isExpanded = false }: OrdersListProps) {
   const { orders, loading, error } = useCustomerOrders();
+  const lastOrderRef = useRef<HTMLDivElement | null>(null);
+  const sortedOrders = [...orders].sort(
+    (a, b) => new Date(a.order_date).getTime() - new Date(b.order_date).getTime()
+  );
+
+  useEffect(() => {
+    if (!isExpanded || sortedOrders.length === 0) {
+      return;
+    }
+
+    // Aguarda a animação do bloco para posicionar na última linha (pedido mais recente).
+    const timer = window.setTimeout(() => {
+      lastOrderRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, 320);
+
+    return () => window.clearTimeout(timer);
+  }, [isExpanded, sortedOrders.length]);
+
+  const renderHeader = (count?: number) => {
+    if (!showHeader) {
+      return null;
+    }
+
+    return (
+      <div className={styles.header}>
+        <h3>📦 Meus Pedidos</h3>
+        {typeof count === 'number' && <span className={styles.count}>{count}</span>}
+      </div>
+    );
+  };
 
   if (loading) {
     return (
       <div className={styles.container}>
-        <div className={styles.header}>
-          <h3>📦 Meus Pedidos</h3>
-        </div>
+        {renderHeader()}
         <div className={styles.skeleton} />
       </div>
     );
@@ -18,9 +52,7 @@ export function OrdersList() {
   if (error) {
     return (
       <div className={styles.container}>
-        <div className={styles.header}>
-          <h3>📦 Meus Pedidos</h3>
-        </div>
+        {renderHeader()}
         <div className={styles.errorMessage}>{error}</div>
       </div>
     );
@@ -29,9 +61,7 @@ export function OrdersList() {
   if (orders.length === 0) {
     return (
       <div className={styles.container}>
-        <div className={styles.header}>
-          <h3>📦 Meus Pedidos</h3>
-        </div>
+        {renderHeader()}
         <div className={styles.emptyState}>
           <p>Nenhum pedido realizado ainda</p>
           <small>Comece a fazer seus pedidos agora!</small>
@@ -55,38 +85,41 @@ export function OrdersList() {
 
   const getStatusLabel = (status: string) => {
     switch (status) {
-      case 'DELIVERED':
-        return '✓ Entregue';
-      case 'CONFIRMED':
-        return '→ Confirmado';
       case 'CANCELLED':
-        return '✕ Cancelado';
+        return '✕ Não aplicável';
       default:
         return '⏳ Pendente';
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('pt-BR');
+  const formatOrderTitle = (dateString: string) => {
+    const date = new Date(dateString);
+    const datePart = date.toLocaleDateString('pt-BR');
+    const timePart = date.toLocaleTimeString('pt-BR', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    });
+    return `Pedido ${datePart} às ${timePart}`;
   };
 
   return (
     <div className={styles.container}>
-      <div className={styles.header}>
-        <h3>📦 Meus Pedidos</h3>
-        <span className={styles.count}>{orders.length}</span>
-      </div>
+      {renderHeader(sortedOrders.length)}
 
       <div className={styles.list}>
-        {orders.map((order) => (
-          <div key={order.id} className={styles.orderCard}>
+        {sortedOrders.map((order, index) => (
+          <div
+            key={order.id}
+            className={styles.orderCard}
+            ref={index === sortedOrders.length - 1 ? lastOrderRef : null}
+          >
             <div className={styles.cardHeader}>
               <div>
-                <div className={styles.orderNumber}>Pedido #{order.order_number}</div>
-                <div className={styles.orderDate}>{formatDate(order.order_date)}</div>
+                <div className={styles.orderNumber}>{formatOrderTitle(order.order_date)}</div>
               </div>
               <div className={`${styles.status} ${getStatusClass(order.status)}`}>
-                {getStatusLabel(order.status)}
+                {`Pagamento: ${getStatusLabel(order.status)}`}
               </div>
             </div>
 
@@ -109,10 +142,6 @@ export function OrdersList() {
 
               <div className={styles.amount}>R$ {parseFloat(order.total_value).toFixed(2)}</div>
             </div>
-
-            {order.delivery_date && (
-              <div className={styles.cardFooter}>📅 Entrega: {formatDate(order.delivery_date)}</div>
-            )}
           </div>
         ))}
       </div>

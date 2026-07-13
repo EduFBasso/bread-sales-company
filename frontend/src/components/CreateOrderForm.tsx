@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useProducts, Product } from '../hooks/useProducts';
 import { useCreateOrder, CreateOrderPayload } from '../hooks/useCreateOrder';
 import { useCustomerAuth } from '../hooks/useCustomerAuth';
+import { SmartSection } from './SmartSection';
 import styles from './CreateOrderForm.module.css';
 
 interface CartItem {
@@ -21,13 +22,68 @@ export function CreateOrderForm() {
   const [selectedQuantityInput, setSelectedQuantityInput] = useState<string>('');
 
   const [deliveryDate, setDeliveryDate] = useState<string>('');
-  const [paymentMethod, setPaymentMethod] = useState<string>('CREDIT');
   const [notes, setNotes] = useState<string>('');
+  const [deliveryAddressText, setDeliveryAddressText] = useState<string>('');
+  const [openSection, setOpenSection] = useState<string | null>('products');
   const [financial, setFinancial] = useState<{
     limit: number;
     used: number;
     available: number;
   } | null>(null);
+
+  const paymentMethod = 'CREDIT';
+
+  const buildAddressText = (source?: {
+    street?: string;
+    number?: string;
+    complement?: string;
+    neighborhood?: string;
+    city?: string;
+    state?: string;
+    zip_code?: string;
+  }) => {
+    if (!source) {
+      return '';
+    }
+
+    return [
+      source.street,
+      source.number,
+      source.complement,
+      source.neighborhood,
+      source.city,
+      source.state,
+      source.zip_code,
+    ]
+      .filter(Boolean)
+      .join(', ');
+  };
+
+  const parseDeliveryAddress = (value: string) => {
+    const parts = value
+      .split(',')
+      .map((part) => part.trim())
+      .filter(Boolean);
+
+    if (parts.length < 6) {
+      return null;
+    }
+
+    const hasComplement = parts.length >= 7;
+    return {
+      shipping_street: parts[0],
+      shipping_number: parts[1],
+      shipping_complement: hasComplement ? parts.slice(2, parts.length - 4).join(', ') : '',
+      shipping_neighborhood: parts[parts.length - 4],
+      shipping_city: parts[parts.length - 3],
+      shipping_state: parts[parts.length - 2],
+      shipping_zip_code: parts[parts.length - 1].replace(/\D/g, ''),
+    };
+  };
+
+  const toggleSection = (sectionId: string) => {
+    setOpenSection((prev) => (prev === sectionId ? null : sectionId));
+  };
 
   useEffect(() => {
     // Regra operacional: pedido feito hoje entrega no dia seguinte (D+1).
@@ -38,6 +94,14 @@ export function CreateOrderForm() {
     const dd = String(tomorrow.getDate()).padStart(2, '0');
     setDeliveryDate(`${yyyy}-${mm}-${dd}`);
   }, []);
+
+  useEffect(() => {
+    if (!customer) {
+      return;
+    }
+
+    setDeliveryAddressText(buildAddressText(customer));
+  }, [customer]);
 
   const parsePositiveInteger = (value: string): number | null => {
     const trimmed = value.trim();
@@ -201,6 +265,19 @@ export function CreateOrderForm() {
       return;
     }
 
+    const parsedDeliveryAddress = parseDeliveryAddress(deliveryAddressText);
+    if (!parsedDeliveryAddress) {
+      alert(
+        'Revise o endereço de entrega. Use o formato: Rua, Número, Complemento opcional, Bairro, Cidade, UF, CEP.'
+      );
+      return;
+    }
+
+    if (parsedDeliveryAddress.shipping_zip_code.length !== 8) {
+      alert('O CEP do endereço de entrega deve conter 8 dígitos.');
+      return;
+    }
+
     // Preparar payload
     const [year, month, day] = deliveryDate.split('-').map(Number);
     const scheduledDelivery = new Date(year, month - 1, day, 8, 0, 0);
@@ -209,6 +286,7 @@ export function CreateOrderForm() {
       delivery_date: scheduledDelivery.toISOString(),
       payment_method: paymentMethod,
       notes,
+      ...parsedDeliveryAddress,
       items: cartItems.map((item) => ({
         product_id: item.product.id,
         quantity: item.quantity,
@@ -237,181 +315,195 @@ export function CreateOrderForm() {
 
   return (
     <div className={styles.container}>
-      <h2>Criar Novo Pedido</h2>
-
       <div className={styles.content}>
-        <div className={styles.financialSection}>
-          <h3>Resumo Financeiro</h3>
-          <div className={styles.financialGrid}>
-            <div className={styles.financialCard}>
-              <label>Saldo Limite</label>
-              <p>{formatCurrency(financialLimit)}</p>
-            </div>
-            <div className={styles.financialCard}>
-              <label>Saldo Utilizado</label>
-              <p>{formatCurrency(financialUsed)}</p>
-            </div>
-            <div className={styles.financialCard}>
-              <label>Saldo Disponível</label>
-              <p>{formatCurrency(availableCredit)}</p>
-            </div>
-          </div>
-          {paymentMethod === 'CREDIT' && cartItems.length > 0 && (
-            <p className={styles.financialProjection}>
-              Após este pedido: <strong>{formatCurrency(projectedAvailable)}</strong>
-            </p>
-          )}
-        </div>
-
-        {/* Seção de seleção de produtos */}
-        <div className={styles.section}>
-          <h3>📦 Selecionar Produtos</h3>
-          <div className={styles.productSelector}>
-            <select
-              value={selectedProductId}
-              onChange={(e) => setSelectedProductId(e.target.value)}
-              className={styles.select}
-            >
-              <option value="">Escolha um produto...</option>
-              {products.map((product) => (
-                <option key={product.id} value={product.id}>
-                  {product.name} - R$ {parseFloat(product.price).toFixed(2)}
-                </option>
-              ))}
-            </select>
-
-            <input
-              type="text"
-              inputMode="numeric"
-              pattern="[0-9]*"
-              value={selectedQuantityInput}
-              onChange={(e) => {
-                const next = e.target.value.replace(/\D/g, '');
-                setSelectedQuantityInput(next);
-              }}
-              onFocus={(e) => e.currentTarget.select()}
-              className={styles.quantitySelectorInput}
-              placeholder="Ex: 10"
-              aria-label="Quantidade"
-            />
-
-            <button onClick={handleAddToCart} className={styles.buttonAdd} type="button">
-              Adicionar ao Carrinho
-            </button>
-          </div>
-        </div>
-
-        {/* Carrinho */}
-        <div className={styles.section}>
-          <h3>🛒 Carrinho ({cartItems.length} itens)</h3>
-          {cartItems.length === 0 ? (
-            <p className={styles.emptyMessage}>Carrinho vazio. Adicione produtos acima.</p>
-          ) : (
-            <div className={styles.cartItems}>
-              {cartItems.map((item) => (
-                <div key={item.product.id} className={styles.cartItem}>
-                  <div className={styles.itemInfo}>
-                    <span className={styles.itemName}>{item.product.name}</span>
-                    <span className={styles.itemPrice}>
-                      R$ {parseFloat(item.product.price).toFixed(2)} cada
-                    </span>
-                  </div>
-
-                  <div className={styles.itemQuantity}>
-                    <button
-                      onClick={() => handleUpdateQuantity(item.product.id, item.quantity - 1)}
-                      className={styles.buttonSmall}
-                      type="button"
-                    >
-                      -
-                    </button>
-                    <input
-                      type="number"
-                      min="1"
-                      value={item.quantity}
-                      onChange={(e) =>
-                        handleUpdateQuantity(item.product.id, parseInt(e.target.value) || 1)
-                      }
-                      className={styles.quantityInput}
-                    />
-                    <button
-                      onClick={() => handleUpdateQuantity(item.product.id, item.quantity + 1)}
-                      className={styles.buttonSmall}
-                      type="button"
-                    >
-                      +
-                    </button>
-                  </div>
-
-                  <div className={styles.itemSubtotal}>
-                    R$ {(parseFloat(item.product.price) * item.quantity).toFixed(2)}
-                  </div>
-
-                  <button
-                    onClick={() => handleRemoveFromCart(item.product.id)}
-                    className={styles.buttonRemove}
-                    type="button"
-                  >
-                    ✕
-                  </button>
-                </div>
-              ))}
-
-              <div className={styles.cartTotal}>
-                <strong>Total:</strong>
-                <strong className={styles.totalAmount}>R$ {calculateTotal().toFixed(2)}</strong>
+        <SmartSection
+          title="Resumo Financeiro"
+          isOpen={openSection === 'financial'}
+          onToggle={() => toggleSection('financial')}
+          stickyWhenOpen
+        >
+          <div className={styles.financialSection}>
+            <div className={styles.financialGrid}>
+              <div className={styles.financialCard}>
+                <label>Saldo Limite</label>
+                <p>{formatCurrency(financialLimit)}</p>
+              </div>
+              <div className={styles.financialCard}>
+                <label>Saldo Utilizado</label>
+                <p>{formatCurrency(financialUsed)}</p>
+              </div>
+              <div className={styles.financialCard}>
+                <label>Saldo Disponível</label>
+                <p>{formatCurrency(availableCredit)}</p>
               </div>
             </div>
-          )}
-        </div>
+            {paymentMethod === 'CREDIT' && cartItems.length > 0 && (
+              <p className={styles.financialProjection}>
+                Após este pedido: <strong>{formatCurrency(projectedAvailable)}</strong>
+              </p>
+            )}
+          </div>
+        </SmartSection>
+
+        <SmartSection
+          title="Selecionar Produtos"
+          isOpen={openSection === 'products'}
+          onToggle={() => toggleSection('products')}
+          stickyWhenOpen
+        >
+          <div className={styles.section}>
+            <div className={styles.productSelector}>
+              <select
+                value={selectedProductId}
+                onChange={(e) => setSelectedProductId(e.target.value)}
+                className={styles.select}
+              >
+                <option value="">Escolha um produto...</option>
+                {products.map((product) => (
+                  <option key={product.id} value={product.id}>
+                    {product.name} - R$ {parseFloat(product.price).toFixed(2)}
+                  </option>
+                ))}
+              </select>
+
+              <input
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                value={selectedQuantityInput}
+                onChange={(e) => {
+                  const next = e.target.value.replace(/\D/g, '');
+                  setSelectedQuantityInput(next);
+                }}
+                onFocus={(e) => e.currentTarget.select()}
+                className={styles.quantitySelectorInput}
+                placeholder="Ex: 10"
+                aria-label="Quantidade"
+              />
+
+              <button onClick={handleAddToCart} className={styles.buttonAdd} type="button">
+                Adicionar ao Carrinho
+              </button>
+            </div>
+          </div>
+        </SmartSection>
+
+        <SmartSection
+          title={`Carrinho (${cartItems.length} itens)`}
+          isOpen={openSection === 'cart'}
+          onToggle={() => toggleSection('cart')}
+          stickyWhenOpen
+        >
+          <div className={styles.section}>
+            {cartItems.length === 0 ? (
+              <p className={styles.emptyMessage}>Carrinho vazio. Adicione produtos acima.</p>
+            ) : (
+              <div className={styles.cartItems}>
+                {cartItems.map((item) => (
+                  <div key={item.product.id} className={styles.cartItem}>
+                    <div className={styles.itemInfo}>
+                      <span className={styles.itemName}>{item.product.name}</span>
+                      <span className={styles.itemPrice}>
+                        R$ {parseFloat(item.product.price).toFixed(2)} cada
+                      </span>
+                    </div>
+
+                    <div className={styles.itemQuantity}>
+                      <button
+                        onClick={() => handleUpdateQuantity(item.product.id, item.quantity - 1)}
+                        className={styles.buttonSmall}
+                        type="button"
+                      >
+                        -
+                      </button>
+                      <input
+                        type="number"
+                        min="1"
+                        value={item.quantity}
+                        onChange={(e) =>
+                          handleUpdateQuantity(item.product.id, parseInt(e.target.value) || 1)
+                        }
+                        className={styles.quantityInput}
+                      />
+                      <button
+                        onClick={() => handleUpdateQuantity(item.product.id, item.quantity + 1)}
+                        className={styles.buttonSmall}
+                        type="button"
+                      >
+                        +
+                      </button>
+                    </div>
+
+                    <div className={styles.itemSubtotal}>
+                      R$ {(parseFloat(item.product.price) * item.quantity).toFixed(2)}
+                    </div>
+
+                    <button
+                      onClick={() => handleRemoveFromCart(item.product.id)}
+                      className={styles.buttonRemove}
+                      type="button"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+
+                <div className={styles.cartTotal}>
+                  <strong>Total:</strong>
+                  <strong className={styles.totalAmount}>R$ {calculateTotal().toFixed(2)}</strong>
+                </div>
+              </div>
+            )}
+          </div>
+        </SmartSection>
 
         {/* Dados de entrega e pagamento */}
         <form onSubmit={handleSubmitOrder} className={styles.formSection}>
-          <div className={styles.section}>
-            <h3>📅 Dados de Entrega</h3>
+          <SmartSection
+            title="Dados de Entrega"
+            isOpen={openSection === 'delivery'}
+            onToggle={() => toggleSection('delivery')}
+            stickyWhenOpen
+          >
+            <div className={styles.section}>
+              <div className={styles.formGroup}>
+                <label>Data de Entrega *</label>
+                <input
+                  type="text"
+                  value={formatDeliveryDateLabel(deliveryDate)}
+                  className={styles.dateAutoInput}
+                  readOnly
+                  aria-label="Data de entrega automática"
+                />
+              </div>
 
-            <div className={styles.formGroup}>
-              <label>Data de Entrega *</label>
-              <input
-                type="text"
-                value={formatDeliveryDateLabel(deliveryDate)}
-                className={styles.dateAutoInput}
-                readOnly
-                aria-label="Data de entrega automática"
-              />
+              <div className={styles.formGroup}>
+                <label>Endereço de Entrega *</label>
+                <textarea
+                  value={deliveryAddressText}
+                  onChange={(e) => setDeliveryAddressText(e.target.value)}
+                  className={styles.textarea}
+                  placeholder="Rua, Número, Complemento opcional, Bairro, Cidade, UF, CEP"
+                  rows={4}
+                />
+                <small className={styles.helperText}>
+                  Padrão do cadastro. Se precisar, edite o texto no formato: Rua, Número,
+                  Complemento opcional, Bairro, Cidade, UF, CEP.
+                </small>
+              </div>
+
+              <div className={styles.formGroup}>
+                <label>Notas (opcional)</label>
+                <textarea
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  className={styles.textarea}
+                  placeholder="Ex: Entregar na portaria"
+                  rows={3}
+                />
+              </div>
             </div>
-
-            <div className={styles.formGroup}>
-              <label>Notas (opcional)</label>
-              <textarea
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                className={styles.textarea}
-                placeholder="Ex: Entregar na portaria"
-                rows={3}
-              />
-            </div>
-          </div>
-
-          {/* Método de pagamento */}
-          <div className={styles.section}>
-            <h3>💳 Método de Pagamento</h3>
-
-            <div className={styles.formGroup}>
-              <label>Escolha o método *</label>
-              <select
-                value={paymentMethod}
-                onChange={(e) => setPaymentMethod(e.target.value)}
-                className={styles.select}
-                required
-              >
-                <option value="CREDIT">Fiado (Crédito)</option>
-                <option value="CASH">Dinheiro</option>
-                <option value="PIX">PIX</option>
-                <option value="TRANSFER">Transferência</option>
-              </select>
-            </div>
-          </div>
+          </SmartSection>
 
           {/* Erro de criação */}
           {orderError && <div className={styles.error}>Erro: {orderError}</div>}
