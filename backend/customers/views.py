@@ -78,44 +78,18 @@ class CustomerViewSet(viewsets.ModelViewSet):
         """
         DELETE /api/customers/{id}
 
-        Quando há histórico vinculado (pedidos/transações), devolve erro 409
-        em vez de quebrar com 500.
-
-        Para administradores, exige confirmação da senha do dono via
-        campo `admin_password` no body da requisição.
+        Endpoint desativado para o fluxo operacional da demonstração.
+        Clientes devem ser inativados via bloqueio/desbloqueio.
         """
-        if request.user.is_staff:
-            admin_password = request.data.get('admin_password')
-            if not admin_password:
-                return Response(
-                    {'detail': 'admin_password é obrigatória para apagar cliente'},
-                    status=status.HTTP_400_BAD_REQUEST,
+        return Response(
+            {
+                'detail': (
+                    'Exclusão permanente de cliente está desativada. '
+                    'Use bloquear para inativar o cliente.'
                 )
-
-            if not request.user.check_password(admin_password):
-                return Response(
-                    {'detail': 'Senha do administrador incorreta'},
-                    status=status.HTTP_401_UNAUTHORIZED,
-                )
-
-        instance = self.get_object()
-        try:
-            self.perform_destroy(instance)
-            return Response(status=status.HTTP_204_NO_CONTENT)
-        except ProtectedError:
-            orders_count = instance.orders.count()
-            transactions_count = instance.transactions.count()
-            return Response(
-                {
-                    'detail': (
-                        'Não é possível apagar este cliente porque ele possui histórico '
-                        'vinculado. Use bloquear para inativar o cliente.'
-                    ),
-                    'orders_count': orders_count,
-                    'transactions_count': transactions_count,
-                },
-                status=status.HTTP_409_CONFLICT,
-            )
+            },
+            status=status.HTTP_405_METHOD_NOT_ALLOWED,
+        )
 
     @action(detail=True, methods=['get'], url_path='orders')
     def customer_orders(self, request, pk=None):

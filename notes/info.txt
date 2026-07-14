@@ -21,3 +21,28 @@ Dados do form que falta acrescentar:
 9. Atualizar senha: Para o caso de haver comprometimento, ou risco de qualquer espécie e precisar, trocar a senha, usa-se o button Atualizar.
 
 10. Compartilhamento da Senha pelo WhatsApp se mantem, assim como visualizar ou copiar e todos como ja esta, precisam da senha do Administrador para aprovar.
+
+
+-----------------------------------------------------------------------------------------------------
+
+Apagar Cliente:
+
+1. Pré-demo: exclusão permanente desativada no painel operacional.
+2. Fluxo oficial: Bloquear -> Digitar senha do administrador -> Fim.
+3. Cliente com histórico deve ser inativado via bloqueio (com possibilidade de desbloqueio depois).
+4. Política de demo: sem hard delete para evitar perda de rastreabilidade.
+
+-----------------------------------------------------------------------------------------------------
+
+Revisão Técnica Pré-Demonstração (14/07/2026):
+
+1. Fluxo de segurança de cliente simplificado:
+	- removida ação de apagar permanentemente no modal operacional.
+	- mantido apenas bloquear/desbloquear com confirmação por senha do dono.
+2. Endpoint de exclusão permanente de cliente desativado para demonstração:
+	- API responde orientando uso de bloqueio para inativação.
+3. Build frontend validado com sucesso para entrega inicial.
+4. Warning do Vite 8 sobre plugin React/Babel (depreciação):
+	- reconhecido e documentado.
+	- correção adiada para fase online, antes do deploy, sem impactar a primeira entrega.
+

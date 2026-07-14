@@ -1,5 +1,30 @@
 # Registro de Alterações
 
+## [2026-07-14] - Revisão Pré-Demo: Segurança de Cliente ✅
+
+### Foco Operacional para Primeira Demonstração
+
+**Status:** ✅ ALINHADO PARA DEMO
+
+#### Alterações Aplicadas:
+1. **Fluxo do modal de bloqueio simplificado**:
+   - removido caminho de apagar permanentemente.
+   - mantido apenas bloquear/desbloquear com senha do administrador.
+2. **Exclusão permanente de cliente desativada na API operacional**:
+   - endpoint de DELETE agora retorna orientação de bloqueio para inativação.
+3. **Fluxo de senha no modal de cliente estabilizado**:
+   - visualizar, copiar e compartilhar WhatsApp validados.
+   - atualização de senha com compartilhamento imediato via WhatsApp.
+
+#### Decisão de Escopo Técnico:
+1. **Warning Vite 8 + React Babel (depreciação)** reconhecido, porém **adiado**.
+2. Ajuste para `@vitejs/plugin-react-oxc` será tratado **antes do deploy online**, não antes da primeira entrega.
+
+#### Resultado para Demonstração:
+1. Processo administrativo mais curto e previsível.
+2. Menor risco de remoção acidental de dados históricos.
+3. Build de frontend segue verde para entrega inicial.
+
 ## [2026-07-13] - Sessão Cliente Mobile Refinada ✅
 
 ### FASE: Consolidação da Experiência do Cliente para Demonstração
