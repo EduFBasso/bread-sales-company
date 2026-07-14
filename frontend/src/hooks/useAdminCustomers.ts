@@ -21,6 +21,8 @@ interface Customer {
     username: string;
     email: string;
   };
+  cpf?: string;
+  cnpj?: string;
   cnpj_cpf?: string;
   current_balance?: string;
   available_credit?: string;

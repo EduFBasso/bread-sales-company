@@ -26,7 +26,13 @@ export const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
   const [securityDialogDescription, setSecurityDialogDescription] = useState('');
   const [securityDialogConfirmLabel, setSecurityDialogConfirmLabel] = useState('');
   const [pendingSecureAction, setPendingSecureAction] = useState<
-    'approve' | 'set-password' | 'view-password' | 'copy-password' | 'share-password' | null
+    | 'approve'
+    | 'cancel-pending'
+    | 'set-password'
+    | 'view-password'
+    | 'copy-password'
+    | 'share-password'
+    | null
   >(null);
 
   const [creditLimit, setCreditLimit] = useState('');
@@ -159,6 +165,51 @@ export const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
     return password;
   };
 
+  const executeCancelPending = async (adminPassword: string) => {
+    if (!adminPassword) {
+      setActionError('Digite a senha do dono para cancelar o cadastro');
+      return;
+    }
+
+    setIsActionLoading(true);
+    setActionError(null);
+    setActionSuccess(null);
+
+    try {
+      const token = localStorage.getItem('bread_admin_token');
+      if (!token) {
+        throw new Error('Token não encontrado');
+      }
+
+      const response = await fetch(`/api/customers/${customerId}/reject`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          admin_password: adminPassword,
+        }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.detail || 'Erro ao cancelar cadastro');
+      }
+
+      setActionSuccess('✅ Cadastro recusado e removido permanentemente.');
+      setSecurityDialogOpen(false);
+      setPendingSecureAction(null);
+      onCustomerUpdated();
+      onClose();
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'Erro ao cancelar cadastro';
+      setActionError(errorMsg);
+    } finally {
+      setIsActionLoading(false);
+    }
+  };
+
   const copyPasswordToClipboard = async (text: string) => {
     if (navigator?.clipboard?.writeText) {
       await navigator.clipboard.writeText(text);
@@ -233,7 +284,13 @@ export const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
   };
 
   const openSecurityDialog = (
-    action: 'approve' | 'set-password' | 'view-password' | 'copy-password' | 'share-password'
+    action:
+      | 'approve'
+      | 'cancel-pending'
+      | 'set-password'
+      | 'view-password'
+      | 'copy-password'
+      | 'share-password'
   ) => {
     setActionError(null);
     setPendingSecureAction(action);
@@ -244,6 +301,12 @@ export const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
         'Digite a senha do dono para aprovar este cadastro e gerar a senha oficial.'
       );
       setSecurityDialogConfirmLabel('Confirmar Aprovação');
+    } else if (action === 'cancel-pending') {
+      setSecurityDialogTitle('Confirmar Cancelamento');
+      setSecurityDialogDescription(
+        'Digite a senha do dono para recusar este cadastro pendente. O cliente será removido permanentemente.'
+      );
+      setSecurityDialogConfirmLabel('Cancelar Cadastro');
     } else if (action === 'set-password') {
       setSecurityDialogTitle('Confirmar Nova Senha');
       setSecurityDialogDescription(
@@ -275,6 +338,11 @@ export const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
 
     if (pendingSecureAction === 'set-password') {
       await executeSetPassword(adminPassword);
+      return;
+    }
+
+    if (pendingSecureAction === 'cancel-pending') {
+      await executeCancelPending(adminPassword);
       return;
     }
 
@@ -337,6 +405,11 @@ export const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
   };
 
   const customer = customerDetail;
+  const documentLabel = customer?.customer_type === 'PF' ? 'CPF' : 'CNPJ';
+  const documentValue =
+    customer?.customer_type === 'PF'
+      ? customer?.cpf || customer?.cnpj_cpf
+      : customer?.cnpj || customer?.cnpj_cpf;
 
   return (
     <div className={styles.modalOverlay} onClick={onClose}>
@@ -377,12 +450,10 @@ export const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                   <label>Tipo</label>
                   <p>{customer.customer_type === 'PF' ? 'Pessoa Física' : 'Pessoa Jurídica'}</p>
                 </div>
-                {customer.cnpj_cpf && (
-                  <div className={styles.detailItem}>
-                    <label>CPF/CNPJ</label>
-                    <p>{customer.cnpj_cpf}</p>
-                  </div>
-                )}
+                <div className={styles.detailItem}>
+                  <label>{documentLabel}</label>
+                  <p>{documentValue || 'Não informado'}</p>
+                </div>
                 <div className={styles.detailItem}>
                   <label>Telefone</label>
                   <p>
@@ -579,18 +650,27 @@ export const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
             {/* Action Buttons */}
             <div className={styles.modalActions}>
               {customer.status === 'PENDENTE' && (
-                <button
-                  className={styles.approveButton}
-                  onClick={() => openSecurityDialog('approve')}
-                  disabled={isActionLoading}
-                >
-                  {isActionLoading ? '⏳ Aprovando...' : '✅ Aprovar'}
-                </button>
+                <>
+                  <button
+                    className={styles.approveButton}
+                    onClick={() => openSecurityDialog('approve')}
+                    disabled={isActionLoading}
+                  >
+                    {isActionLoading ? '⏳ Processando...' : '✅ Aprovar'}
+                  </button>
+                  <button
+                    className={styles.blockButton}
+                    onClick={() => openSecurityDialog('cancel-pending')}
+                    disabled={isActionLoading}
+                  >
+                    Cancelar
+                  </button>
+                </>
               )}
               {customer.status === 'BLOQUEADO' && (
                 <p className={styles.blockedNote}>Cliente bloqueado - sem ações disponíveis</p>
               )}
-              {customer.status !== 'APROVADO' && (
+              {customer.status !== 'APROVADO' && customer.status !== 'PENDENTE' && (
                 <button
                   className={styles.closeButtonModal}
                   onClick={onClose}

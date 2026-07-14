@@ -435,6 +435,65 @@ class CustomerViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(customer)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
+    @action(detail=True, methods=['post'], url_path='reject', permission_classes=[IsAuthenticated])
+    def reject_pending_customer(self, request, pk=None):
+        """
+        POST /api/customers/{id}/reject/
+
+        Recusa um cadastro pendente e remove permanentemente o cliente (hard delete).
+        Requer confirmação da senha do administrador.
+        """
+        if not request.user.is_staff:
+            return Response(
+                {'detail': 'Apenas administradores podem recusar cadastros'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        admin_password = request.data.get('admin_password')
+        if not admin_password:
+            return Response(
+                {'detail': 'admin_password é obrigatória para recusar cadastro'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if not request.user.check_password(admin_password):
+            return Response(
+                {'detail': 'Senha do administrador incorreta'},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+
+        customer = self.get_object()
+
+        if customer.status != customer.ApprovalStatus.PENDING:
+            return Response(
+                {'detail': 'Apenas cadastros pendentes podem ser recusados com exclusão permanente'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        customer_id = customer.id
+        customer_nickname = customer.nickname
+
+        try:
+            customer.delete()
+        except ProtectedError:
+            return Response(
+                {
+                    'detail': (
+                        'Não foi possível remover permanentemente este cadastro por vínculos existentes.'
+                    )
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        return Response(
+            {
+                'detail': 'Cadastro pendente recusado e removido permanentemente.',
+                'deleted_customer_id': customer_id,
+                'nickname': customer_nickname,
+            },
+            status=status.HTTP_200_OK,
+        )
+
     @action(detail=True, methods=['post'], url_path='set-password', permission_classes=[IsAuthenticated])
     def set_password(self, request, pk=None):
         """
@@ -642,6 +701,9 @@ def register_customer(request):
     """
     try:
         data = request.data
+
+        def only_digits(value):
+            return ''.join(ch for ch in str(value or '') if ch.isdigit())
         
         # Validar campos obrigatórios
         required_fields = ['nickname', 'customer_type', 'phone', 'zip_code', 
@@ -658,13 +720,47 @@ def register_customer(request):
         user = User.objects.create_user(username=username, password=str(uuid.uuid4()))
         
         # Criar perfil de cliente
+        customer_type = data['customer_type']
+        cpf = only_digits(data.get('cpf')) if customer_type == 'PF' else ''
+        cnpj = only_digits(data.get('cnpj')) if customer_type == 'PJ' else ''
+        document = cpf or cnpj
+
+        if customer_type == 'PF':
+            if not cpf:
+                return Response(
+                    {'detail': 'CPF é obrigatório para Pessoa Física'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            if len(cpf) != 11:
+                return Response(
+                    {'detail': 'CPF deve conter 11 dígitos'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+        if customer_type == 'PJ':
+            if not cnpj:
+                return Response(
+                    {'detail': 'CNPJ é obrigatório para Pessoa Jurídica'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            if len(cnpj) != 14:
+                return Response(
+                    {'detail': 'CNPJ deve conter 14 dígitos'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
         customer_data = {
             'nickname': data['nickname'],
-            'customer_type': data['customer_type'],
+            'customer_type': customer_type,
+            'company_name': (data.get('company_name') or '').strip() or None,
+            'cpf': cpf or None,
+            'cnpj': cnpj or None,
+            'cnpj_cpf': document or None,
             'phone': data.get('phone', ''),
             'zip_code': data.get('zip_code', ''),
             'street': data.get('street', ''),
             'number': data.get('number', ''),
+            'complement': (data.get('complement') or '').strip() or None,
             'neighborhood': data.get('neighborhood', ''),
             'city': data.get('city', ''),
             'state': data.get('state', 'SP'),

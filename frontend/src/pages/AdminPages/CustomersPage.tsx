@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAdminCustomers } from '../../hooks/useAdminCustomers';
 import { CustomerDetailModal } from './CustomerDetailModal';
-import { BlockConfirmModal } from './BlockConfirmModal';
+import BlockConfirmModal from './BlockConfirmModal';
 import styles from './AdminPages.module.css';
 
 interface CustomersPageProps {
@@ -33,6 +33,19 @@ export function CustomersPage({ initialFilter, onError, onSuccess }: CustomersPa
   useEffect(() => {
     const status = activeSubTab === 'pending' ? 'PENDENTE' : undefined;
     fetchAllCustomers({ status, search: searchInput || undefined });
+  }, [activeSubTab, searchInput, fetchAllCustomers]);
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => {
+      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') {
+        return;
+      }
+
+      const status = activeSubTab === 'pending' ? 'PENDENTE' : undefined;
+      fetchAllCustomers({ status, search: searchInput || undefined });
+    }, 8000);
+
+    return () => window.clearInterval(intervalId);
   }, [activeSubTab, searchInput, fetchAllCustomers]);
 
   useEffect(() => {
@@ -173,7 +186,7 @@ export function CustomersPage({ initialFilter, onError, onSuccess }: CustomersPa
                             className={styles.approveButton}
                             onClick={() => handleOpenModal(customer.id)}
                           >
-                            ✅ Aprovar (Detalhes)
+                            ✅ Aprovar
                           </button>
                         )}
                         {customer.status === 'APROVADO' && (

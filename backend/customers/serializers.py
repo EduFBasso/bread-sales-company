@@ -76,7 +76,7 @@ class CustomerSerializer(serializers.ModelSerializer):
         # ATUALIZADO: Inclui auditoria (approved_by, approved_at, blocked_by, blocked_at)
         fields = [
             'id', 'user', 'customer_type', 'nickname', 'status',
-            'company_name', 'cnpj_cpf', 'phone', 
+            'company_name', 'cpf', 'cnpj', 'cnpj_cpf', 'phone', 
             'zip_code', 'street', 'number', 'complement', 
             'neighborhood', 'city', 'state',
             'credit_limit', 'current_balance', 'available_credit',
