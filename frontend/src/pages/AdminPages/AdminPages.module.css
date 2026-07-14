@@ -171,6 +171,35 @@
   color: #333;
 }
 
+.actionHeader {
+  text-align: center !important;
+}
+
+.actionCell {
+  text-align: center;
+}
+
+.actionButtonsGroup {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+  flex-wrap: nowrap;
+}
+
+.tableActionButton {
+  width: 150px;
+  min-width: 150px;
+  flex: 0 0 150px;
+  text-align: center;
+}
+
+.actionButtonsGroup .tableActionButton {
+  width: 150px !important;
+  min-width: 150px !important;
+  max-width: 150px;
+  flex: 0 0 150px !important;
+}
+
 .table tbody tr:hover {
   background-color: #fafaf8;
 }
@@ -664,6 +693,101 @@
   font-weight: 500;
 }
 
+.detailFullWidth {
+  grid-column: 1 / -1;
+}
+
+.detailInfoPair {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+.detailItemWithAction {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.35rem;
+}
+
+.editInlineButton {
+  border: none;
+  background: transparent;
+  color: #d4a017;
+  font-size: 1.15rem;
+  font-weight: 700;
+  line-height: 1;
+  padding: 0;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.editInlineButton:hover {
+  color: #b88b00;
+}
+
+.editInlineButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.inlineIconLink {
+  margin-left: 0.35rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+}
+
+.inlineIconLink svg {
+  width: 18px;
+  height: 18px;
+}
+
+.iconActionButton {
+  min-width: 40px;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: none !important;
+  border-radius: 10px !important;
+  background: transparent !important;
+  color: #4a5868;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.iconActionButton:hover {
+  background: #f2f4f7 !important;
+  color: #2f3a48;
+}
+
+.iconActionButton svg {
+  width: 20px;
+  height: 20px;
+}
+
+.editActionIcon {
+  color: #d4a017;
+}
+
+.editActionIcon:hover {
+  color: #b88b00;
+}
+
+.whatsAppAction {
+  color: #1fb95a;
+}
+
+.whatsAppAction:hover {
+  color: #1aa94f;
+}
+
 .passwordInlineRow {
   display: flex;
   gap: 0.5rem;
@@ -793,6 +917,10 @@
   gap: 0.5rem;
 }
 
+.passwordDialogPasswordSpacing {
+  margin-top: 0.9rem;
+}
+
 .passwordDialogField label {
   font-size: 0.9rem;
   font-weight: 600;
@@ -817,6 +945,65 @@
   display: flex;
   gap: 0.75rem;
   padding: 1rem 1.5rem 1.5rem;
+}
+
+.passwordDialogCancelButton {
+  min-width: 170px;
+  padding: 0.75rem 1.25rem;
+  background-color: #6c757d;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.passwordDialogCancelButton:hover {
+  background-color: #5a6268;
+  transform: translateY(-1px);
+}
+
+.passwordDialogCancelButton:active {
+  transform: translateY(0);
+}
+
+.passwordDialogCancelButton:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.passwordDialogConfirmButton {
+  margin-left: auto;
+  min-width: 210px;
+  padding: 0.75rem 1.5rem;
+  background-color: #28a745;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.passwordDialogConfirmButton:hover {
+  background-color: #218838;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(40, 167, 69, 0.25);
+}
+
+.passwordDialogConfirmButton:active {
+  transform: translateY(0);
+}
+
+.passwordDialogConfirmButton:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }
 
 .sectionActions {
@@ -957,6 +1144,11 @@
     grid-template-columns: 1fr;
   }
 
+  .detailInfoPair {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+  }
+
   .passwordInlineRow {
     align-items: stretch;
   }
@@ -986,6 +1178,13 @@
   .passwordDialogActions {
     flex-direction: column;
     padding: 1rem;
+  }
+
+  .passwordDialogCancelButton,
+  .passwordDialogConfirmButton {
+    width: 100%;
+    min-width: auto;
+    margin-left: 0;
   }
 
   .sectionActions {

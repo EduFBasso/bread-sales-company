@@ -29,6 +29,7 @@ export function CustomersPage({ initialFilter, onError, onSuccess }: CustomersPa
     nickname: string;
     action: 'block' | 'unblock';
   } | null>(null);
+  const [openApproveDirectly, setOpenApproveDirectly] = useState(false);
 
   useEffect(() => {
     const status = activeSubTab === 'pending' ? 'PENDENTE' : undefined;
@@ -79,6 +80,13 @@ export function CustomersPage({ initialFilter, onError, onSuccess }: CustomersPa
   };
 
   const handleOpenModal = (customerId: number) => {
+    setOpenApproveDirectly(false);
+    setSelectedCustomerId(customerId);
+    setIsModalOpen(true);
+  };
+
+  const handleOpenApproveFlow = (customerId: number) => {
+    setOpenApproveDirectly(true);
     setSelectedCustomerId(customerId);
     setIsModalOpen(true);
   };
@@ -86,6 +94,7 @@ export function CustomersPage({ initialFilter, onError, onSuccess }: CustomersPa
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setSelectedCustomerId(null);
+    setOpenApproveDirectly(false);
   };
 
   const handleCustomerUpdated = () => {
@@ -95,6 +104,12 @@ export function CustomersPage({ initialFilter, onError, onSuccess }: CustomersPa
 
   const displayedCustomers =
     activeSubTab === 'pending' ? allCustomers.filter((c) => c.status === 'PENDENTE') : allCustomers;
+
+  const formatCurrency = (value?: string) => {
+    const numeric = Number.parseFloat(value || '0');
+    const safe = Number.isFinite(numeric) ? numeric : 0;
+    return `R$ ${safe.toFixed(2).replace('.', ',')}`;
+  };
 
   return (
     <div>
@@ -149,8 +164,8 @@ export function CustomersPage({ initialFilter, onError, onSuccess }: CustomersPa
                   <th>Tipo</th>
                   <th>Telefone</th>
                   <th>Status</th>
-                  <th>Saldo</th>
-                  <th>Ação</th>
+                  <th>Gasto</th>
+                  <th className={styles.actionHeader}>Ação</th>
                 </tr>
               </thead>
               <tbody>
@@ -172,26 +187,26 @@ export function CustomersPage({ initialFilter, onError, onSuccess }: CustomersPa
                             : '🚫 Bloqueado'}
                       </span>
                     </td>
-                    <td>R$ {customer.current_balance || '0.00'}</td>
-                    <td>
-                      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    <td>{formatCurrency(customer.financial_used || customer.current_balance)}</td>
+                    <td className={styles.actionCell}>
+                      <div className={styles.actionButtonsGroup}>
                         <button
-                          className={styles.detailsButton}
+                          className={`${styles.detailsButton} ${styles.tableActionButton}`}
                           onClick={() => handleOpenModal(customer.id)}
                         >
                           📋 Detalhes
                         </button>
                         {customer.status === 'PENDENTE' && (
                           <button
-                            className={styles.approveButton}
-                            onClick={() => handleOpenModal(customer.id)}
+                            className={`${styles.approveButton} ${styles.tableActionButton}`}
+                            onClick={() => handleOpenApproveFlow(customer.id)}
                           >
                             ✅ Aprovar
                           </button>
                         )}
                         {customer.status === 'APROVADO' && (
                           <button
-                            className={styles.blockButton}
+                            className={`${styles.blockButton} ${styles.tableActionButton}`}
                             onClick={() => handleBlock(customer.id, customer.nickname)}
                           >
                             🚫 Bloquear
@@ -199,7 +214,7 @@ export function CustomersPage({ initialFilter, onError, onSuccess }: CustomersPa
                         )}
                         {customer.status === 'BLOQUEADO' && (
                           <button
-                            className={styles.unblockButton}
+                            className={`${styles.unblockButton} ${styles.tableActionButton}`}
                             onClick={() => handleUnblock(customer.id, customer.nickname)}
                           >
                             🔓 Desbloquear
@@ -220,6 +235,7 @@ export function CustomersPage({ initialFilter, onError, onSuccess }: CustomersPa
         isOpen={isModalOpen}
         onClose={handleCloseModal}
         onCustomerUpdated={handleCustomerUpdated}
+        autoOpenApproveConfirm={openApproveDirectly}
       />
 
       {blockCustomerData && (

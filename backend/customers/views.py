@@ -494,6 +494,71 @@ class CustomerViewSet(viewsets.ModelViewSet):
             status=status.HTTP_200_OK,
         )
 
+    @action(detail=True, methods=['post'], url_path='update-credit-limit', permission_classes=[IsAuthenticated])
+    def update_credit_limit(self, request, pk=None):
+        """
+        POST /api/customers/{id}/update-credit-limit/
+
+        Atualiza o limite de crédito de um cliente com confirmação da senha do admin.
+        """
+        if not request.user.is_staff:
+            return Response(
+                {'detail': 'Apenas administradores podem atualizar limite de crédito'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        admin_password = request.data.get('admin_password')
+        if not admin_password:
+            return Response(
+                {'detail': 'admin_password é obrigatória'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if not request.user.check_password(admin_password):
+            return Response(
+                {'detail': 'Senha do administrador incorreta'},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+
+        credit_limit = request.data.get('credit_limit')
+        if credit_limit in (None, ''):
+            return Response(
+                {'detail': 'credit_limit é obrigatório'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            limit_decimal = Decimal(credit_limit)
+            if limit_decimal <= 0:
+                return Response(
+                    {'detail': 'credit_limit deve ser maior que 0'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        except Exception:
+            return Response(
+                {'detail': 'credit_limit deve ser um número válido'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        customer = self.get_object()
+        previous_limit = customer.credit_limit or Decimal('0.00')
+        customer.credit_limit = limit_decimal
+        customer.save(update_fields=['credit_limit', 'updated_at'])
+
+        CustomerAuditLog.objects.create(
+            customer=customer,
+            action='CREDIT_LIMIT_UPDATED',
+            admin_user=request.user,
+            details={
+                'previous_limit': str(previous_limit),
+                'new_limit': str(limit_decimal),
+                'updated_by_user': request.user.username,
+            }
+        )
+
+        serializer = self.get_serializer(customer)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
     @action(detail=True, methods=['post'], url_path='set-password', permission_classes=[IsAuthenticated])
     def set_password(self, request, pk=None):
         """

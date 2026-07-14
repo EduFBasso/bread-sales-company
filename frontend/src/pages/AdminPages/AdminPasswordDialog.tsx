@@ -8,6 +8,12 @@ interface AdminPasswordDialogProps {
   confirmLabel: string;
   isLoading?: boolean;
   error?: string | null;
+  extraFieldLabel?: string;
+  extraFieldValue?: string;
+  extraFieldPlaceholder?: string;
+  extraFieldType?: 'text' | 'number';
+  extraFieldRequired?: boolean;
+  onExtraFieldChange?: (value: string) => void;
   onClose: () => void;
   onConfirm: (password: string) => void;
 }
@@ -19,6 +25,12 @@ export const AdminPasswordDialog: React.FC<AdminPasswordDialogProps> = ({
   confirmLabel,
   isLoading = false,
   error,
+  extraFieldLabel,
+  extraFieldValue,
+  extraFieldPlaceholder,
+  extraFieldType = 'text',
+  extraFieldRequired = false,
+  onExtraFieldChange,
   onClose,
   onConfirm,
 }) => {
@@ -36,6 +48,9 @@ export const AdminPasswordDialog: React.FC<AdminPasswordDialogProps> = ({
     return null;
   }
 
+  const shouldRequireExtraField = extraFieldRequired && !!onExtraFieldChange;
+  const isExtraFieldInvalid = shouldRequireExtraField && !(extraFieldValue || '').trim();
+
   return (
     <div className={styles.modalOverlay} onClick={onClose}>
       <div className={styles.passwordDialogContent} onClick={(e) => e.stopPropagation()}>
@@ -49,7 +64,25 @@ export const AdminPasswordDialog: React.FC<AdminPasswordDialogProps> = ({
         <div className={styles.modalBody}>
           <p className={styles.passwordDialogDescription}>{description}</p>
 
-          <div className={styles.passwordDialogField}>
+          {onExtraFieldChange && (
+            <div className={styles.passwordDialogField}>
+              <label>{extraFieldLabel || 'Valor'}</label>
+              <input
+                type={extraFieldType}
+                value={extraFieldValue || ''}
+                onChange={(e) => onExtraFieldChange(e.target.value)}
+                placeholder={extraFieldPlaceholder || ''}
+                disabled={isLoading}
+                className={styles.adminPasswordInput}
+                min={extraFieldType === 'number' ? '0' : undefined}
+                step={extraFieldType === 'number' ? '0.01' : undefined}
+              />
+            </div>
+          )}
+
+          <div
+            className={`${styles.passwordDialogField} ${onExtraFieldChange ? styles.passwordDialogPasswordSpacing : ''}`}
+          >
             <label>Sua Senha</label>
             <div className={styles.passwordInlineRow}>
               <input
@@ -75,13 +108,17 @@ export const AdminPasswordDialog: React.FC<AdminPasswordDialogProps> = ({
         </div>
 
         <div className={styles.passwordDialogActions}>
-          <button className={styles.closeButtonModal} onClick={onClose} disabled={isLoading}>
+          <button
+            className={styles.passwordDialogCancelButton}
+            onClick={onClose}
+            disabled={isLoading}
+          >
             Cancelar
           </button>
           <button
-            className={styles.approveButton}
+            className={styles.passwordDialogConfirmButton}
             onClick={() => onConfirm(password)}
-            disabled={!password || isLoading}
+            disabled={!password || isLoading || isExtraFieldInvalid}
           >
             {isLoading ? '⏳ Confirmando...' : confirmLabel}
           </button>
