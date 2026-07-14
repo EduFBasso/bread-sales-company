@@ -41,6 +41,7 @@ export interface FormErrors {
 export interface RegistrationResponse {
   id: number;
   nickname: string;
+  phone?: string;
   status: 'PENDENTE' | 'APROVADO' | 'BLOQUEADO';
   access_token?: string;
   refresh_token?: string;

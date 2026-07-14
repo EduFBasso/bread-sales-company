@@ -16,7 +16,8 @@ O **bread-sales-company** oferece uma interface ultra-simplificada, pensada para
 
 ### ✨ Funcionalidades Principais
 * **Pedidos Mobile:** O cliente final acessa pelo celular e faz o pedido em poucos cliques.
-* **Controle de Saldo (Livro Caixa):** Gerenciamento dinâmico de pagamentos antecipados, fiado e saldos devedores.
+* **Dashboard Mobile do Cliente:** Blocos colapsáveis com foco em leitura rápida, saldo, pedidos e conferência do status financeiro.
+* **Controle de Saldo (Livro Caixa):** Gerenciamento dinâmico de fiado, saldo utilizado e saldo disponível.
 * **Painel do Administrador:** Aprovação de novos clientes com segurança (3 estágios: PENDENTE → APROVADO → BLOQUEADO).
 * **Histórico de Transações:** Registro imutável de todos os pagamentos e débitos.
 * **Integração ViaCEP:** Auto-preenchimento de endereços pelo CEP.
@@ -97,11 +98,28 @@ npm run lint  # TypeScript + ESLint
 npm run build  # Validar build
 ```
 
+### Teste Manual Atual
+1. Registrar um novo cliente.
+2. Aprovar o cliente no painel admin com limite e senha inicial.
+3. Fazer login do cliente no mobile.
+4. Validar dashboard mobile:
+	bloco Informações da Conta com nome comercial, apelido, tipo, telefone e endereço quando houver.
+5. Validar Resumo Financeiro:
+	saldo limite, saldo utilizado e saldo disponível.
+6. Criar um novo pedido pelo mobile:
+	selecionar produtos, conferir carrinho, validar data automática D+1, revisar endereço padrão editável e concluir pedido.
+7. Retornar à dashboard do cliente e abrir Meus Pedidos.
+8. Conferir se os pedidos aparecem no formato cronológico tipo caderno, com foco visual no pedido mais recente.
+9. Conferir se o card do pedido usa semântica de pagamento, não de entrega.
+10. Repetir com outro cliente para validar aprovação, login e criação de pedidos em paralelo.
+
 ## 📝 E2E Workflow Validado
 - ✅ Registro com auto-fill ViaCEP
 - ✅ Aprovação via admin
 - ✅ Login com JWT
-- ✅ Dashboard com saldo e limite de crédito
+- ✅ Dashboard mobile com blocos colapsáveis e leitura simplificada
+- ✅ Dashboard com saldo limite, saldo utilizado e saldo disponível
+- ✅ Novo pedido com endereço padrão editável
 - ✅ Transações imutáveis (livro caixa)
 
 ## 📄 Licença

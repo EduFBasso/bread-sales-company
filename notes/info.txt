@@ -1,26 +1,23 @@
 Fluxo de cadastro pelo cliente:
 
-1. Dono, envia o link da página de cadastro.
+1. Dono, envia o link da página de cadastro (significa que o cliente acessou sua área de login http://192.168.0.142:5173/login) ...
 
-2. Cliente faz o cadastro, e informa o apelido para o dono 
-aprovar e gerar uma senha de acesso ao cliente cadastrado.
+2. Cliente faz o cadastro e o dono recebe a notificação já em Dashboard (pendente).
 
-3. Dono aprova o cadastro e envia a senha para o cliente. 
+3. Dono aprova o cadastro e envia a senha / com limite para o cliente (completando, por whatsapp fluxo que já estava pronto, porém deve ser a senha de acesso, vindo da mesma fonte (já que é criada no momento da aprovação). 
 
-4. Cliente acessa, faz o login, e executa o cadastro. 
+4. Cliente acessa, faz o login com sua senha de acesso para fazer os pedidos que o dono irá providenciar.
+
+5. Cada pedido reduz o limite que o cliente tem para compra.
 
 Dados do form que falta acrescentar:
-   - Apelido (como o cliente é chamado)
-   - Tipo de cliente: Pessoa Jurídica: <- exibe campo para cadastrar CNPJ (se possível usar API para consulta externa, ou criar um validador)
-   - Pessoa Fisica: Exibe número do CPF, que também precisa passar por validação.
 
-Obs. Campo CEP: <- Deve preencher os dados do endereço automaticamente (api)
-
-5. Na tela de login do cliente, ele ve todas suas informações, dividas, e limite de crédito que 
-pode comprar, também visualiza data de pagamento de cada pedido que será individual.
-
-6. Dono deve marcar como pago os pedidos após o cliente pagar cada fatura, a segurança por parte do
-cliente é verificar no seu sistema que fatura do pedido no dia e hora.... esta paga.
+6. Dono deve marcar como pago os pedidos após o cliente pagar cada fatura mudando status de pendente para paga.
 
 7. Uma vez que o pagamento foi feito, não haverá mais como desfazer, nem por parte do dono.
 
+8. A fatura paga devolve o limite de crédito ao dono. 
+
+9. Atualizar senha: Para o caso de haver comprometimento, ou risco de qualquer espécie e precisar, trocar a senha, usa-se o button Atualizar.
+
+10. Compartilhamento da Senha pelo WhatsApp se mantem, assim como visualizar ou copiar e todos como ja esta, precisam da senha do Administrador para aprovar.

@@ -6,7 +6,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from .serializers import AdminLoginSerializer, UserRoleSerializer
 from .models import UserRole
 from customers.models import Customer
-from ledger.models import Transaction
+from orders.models import Order
 from django.db.models import Sum
 from decimal import Decimal
 
@@ -114,16 +114,15 @@ def admin_stats(request):
         status=Customer.ApprovalStatus.APPROVED
     ).count()
     
-    # Calcular saldo a receber: DEBIT - CREDIT
-    total_debit = Transaction.objects.filter(
-        transaction_type=Transaction.TransactionType.DEBIT
-    ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
-    
-    total_credit = Transaction.objects.filter(
-        transaction_type=Transaction.TransactionType.CREDIT
-    ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
-    
-    balance_receivable = total_debit - total_credit
+    # Saldo a receber atual: soma dos pedidos em crédito ainda em aberto.
+    # Nesta fase do produto, o limite do cliente é consumido no ato da criação do pedido.
+    # Pedidos cancelados deixam de compor o valor pendente.
+    balance_receivable = (
+        Order.objects.filter(payment_method='CREDIT')
+        .exclude(status='CANCELLED')
+        .aggregate(total=Sum('total_value'))['total']
+        or Decimal('0.00')
+    )
     
     return Response({
         'total_customers': total_customers,

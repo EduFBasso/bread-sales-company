@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useAdminCustomers } from '../../hooks/useAdminCustomers';
-import { generateRandomPassword, validatePassword } from '../../utils/passwordGenerator';
+import { buildAccessWhatsAppMessage, openWhatsAppMessage } from '../../utils/whatsapp';
 import { AdminPasswordDialog } from './AdminPasswordDialog';
 import styles from './AdminPages.module.css';
 
@@ -29,12 +29,10 @@ export const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
     'approve' | 'set-password' | 'view-password' | 'copy-password' | 'share-password' | null
   >(null);
 
-  // Campos de aprovação
   const [creditLimit, setCreditLimit] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [passwordGenerated, setPasswordGenerated] = useState('');
+  const [currentPassword, setCurrentPassword] = useState('');
   const [copiedToClipboard, setCopiedToClipboard] = useState(false);
-  const [lastApprovedPassword, setLastApprovedPassword] = useState<string | null>(null);
 
   useEffect(() => {
     if (isOpen && customerId) {
@@ -43,9 +41,8 @@ export const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
       setActionSuccess(null);
       setCreditLimit('');
       setShowPassword(false);
-      setPasswordGenerated(generateRandomPassword());
+      setCurrentPassword('');
       setCopiedToClipboard(false);
-      setLastApprovedPassword(null);
       setSecurityDialogOpen(false);
       setPendingSecureAction(null);
     }
@@ -68,7 +65,7 @@ export const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
   };
 
   const executeApprove = async (adminPassword: string) => {
-    if (!creditLimit || !passwordGenerated) {
+    if (!creditLimit) {
       setActionError('Limite de crédito é obrigatório');
       return;
     }
@@ -80,13 +77,6 @@ export const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
 
     if (parseFloat(creditLimit) <= 0) {
       setActionError('Limite de crédito deve ser maior que 0');
-      return;
-    }
-
-    // Validar senha gerada
-    const validation = validatePassword(passwordGenerated);
-    if (!validation.valid) {
-      setActionError(`Senha inválida: ${validation.message}`);
       return;
     }
 
@@ -107,8 +97,6 @@ export const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
         },
         body: JSON.stringify({
           credit_limit: creditLimit,
-          password: passwordGenerated,
-          confirm_password: passwordGenerated,
           admin_password: adminPassword,
         }),
       });
@@ -118,12 +106,21 @@ export const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
         throw new Error(data.detail || 'Erro ao aprovar cliente');
       }
 
-      setLastApprovedPassword(passwordGenerated);
+      const data = await response.json();
+      const approvedPassword = data.password_plain_text || '';
+      setCurrentPassword(approvedPassword);
       setActionSuccess('✅ Cliente aprovado! Agora você pode copiar ou compartilhar a senha.');
       setSecurityDialogOpen(false);
       setPendingSecureAction(null);
       onCustomerUpdated();
       await fetchCustomerDetail(customerId);
+
+      if (customer?.phone && approvedPassword) {
+        openWhatsAppMessage(
+          customer.phone,
+          buildAccessWhatsAppMessage(customer.nickname || 'Cliente', approvedPassword)
+        );
+      }
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Erro ao aprovar cliente';
       setActionError(errorMsg);
@@ -132,21 +129,13 @@ export const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
     }
   };
 
-  // ✨ Funções auxiliares para senha
-  const handleGenerateNewPassword = () => {
-    const newPassword = generateRandomPassword();
-    setPasswordGenerated(newPassword);
-    setCopiedToClipboard(false);
-    setActionSuccess(null);
-  };
-
-  const verifyOwnerPassword = async (adminPassword: string) => {
+  const revealOfficialPassword = async (adminPassword: string) => {
     const token = localStorage.getItem('bread_admin_token');
     if (!token) {
       throw new Error('Token não encontrado');
     }
 
-    const response = await fetch('/api/customers/verify-admin-password', {
+    const response = await fetch(`/api/customers/${customerId}/reveal-password`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -157,60 +146,39 @@ export const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
 
     if (!response.ok) {
       const data = await response.json();
-      throw new Error(data.detail || 'Erro ao confirmar senha do dono');
+      throw new Error(data.detail || 'Erro ao recuperar senha oficial');
     }
+
+    const data = await response.json();
+    const password = data.password_plain_text || '';
+    if (!password) {
+      throw new Error('Senha oficial não está disponível para este cliente');
+    }
+
+    setCurrentPassword(password);
+    return password;
   };
 
-  const handleCopyPassword = async () => {
-    const passwordToCopy = lastApprovedPassword || passwordGenerated;
-    if (!passwordToCopy) {
-      setActionError('Nenhuma senha disponível para copiar');
+  const copyPasswordToClipboard = async (text: string) => {
+    if (navigator?.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
       return;
     }
 
-    try {
-      await navigator.clipboard.writeText(passwordToCopy);
-      setCopiedToClipboard(true);
-      setTimeout(() => setCopiedToClipboard(false), 2000);
-    } catch (err) {
-      setActionError('Erro ao copiar para clipboard');
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.setAttribute('readonly', '');
+    textarea.style.position = 'absolute';
+    textarea.style.left = '-9999px';
+    document.body.appendChild(textarea);
+    textarea.select();
+
+    const copied = document.execCommand('copy');
+    document.body.removeChild(textarea);
+
+    if (!copied) {
+      throw new Error('Não foi possível copiar no navegador atual');
     }
-  };
-
-  const handleSharePassword = () => {
-    const passwordToShare = lastApprovedPassword || passwordGenerated;
-    if (!passwordToShare) {
-      setActionError('Atualize ou aprove com uma nova senha antes de compartilhar');
-      return;
-    }
-
-    if (!customer?.phone) {
-      setActionError('Cliente sem telefone para compartilhamento via WhatsApp');
-      return;
-    }
-
-    const digitsPhone = customer.phone.replace(/\D/g, '');
-    const cleanPhone = digitsPhone.startsWith('55') ? digitsPhone : `55${digitsPhone}`;
-    const encodedMessage = encodeURIComponent(passwordToShare);
-    const appUrl = `whatsapp://send?phone=${cleanPhone}&text=${encodedMessage}`;
-    const webUrl = `https://web.whatsapp.com/send?phone=${cleanPhone}&text=${encodedMessage}`;
-
-    // Tenta abrir o app; se não houver handler, cai para o WhatsApp Web.
-    let appOpened = false;
-    const onVisibilityChange = () => {
-      if (document.visibilityState === 'hidden') {
-        appOpened = true;
-      }
-    };
-
-    document.addEventListener('visibilitychange', onVisibilityChange, { once: true });
-    window.location.href = appUrl;
-
-    window.setTimeout(() => {
-      if (!appOpened) {
-        window.open(webUrl, '_blank', 'noopener,noreferrer');
-      }
-    }, 1200);
   };
 
   const executeSetPassword = async (adminPassword: string) => {
@@ -234,8 +202,6 @@ export const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          password: passwordGenerated,
-          confirm_password: passwordGenerated,
           admin_password: adminPassword,
         }),
       });
@@ -245,7 +211,17 @@ export const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
         throw new Error(data.detail || 'Erro ao atualizar senha do cliente');
       }
 
-      setLastApprovedPassword(passwordGenerated);
+      const data = await response.json();
+      const updatedPassword = data.password_plain_text || '';
+      setCurrentPassword(updatedPassword);
+
+      if (customer?.phone && updatedPassword) {
+        openWhatsAppMessage(
+          customer.phone,
+          buildAccessWhatsAppMessage(customer.nickname || 'Cliente', updatedPassword)
+        );
+      }
+
       setActionSuccess('✅ Nova senha definida com sucesso.');
       setSecurityDialogOpen(false);
       setPendingSecureAction(null);
@@ -264,11 +240,15 @@ export const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
 
     if (action === 'approve') {
       setSecurityDialogTitle('Confirmar Aprovação');
-      setSecurityDialogDescription('Digite a senha do dono para aprovar este cadastro.');
+      setSecurityDialogDescription(
+        'Digite a senha do dono para aprovar este cadastro e gerar a senha oficial.'
+      );
       setSecurityDialogConfirmLabel('Confirmar Aprovação');
     } else if (action === 'set-password') {
       setSecurityDialogTitle('Confirmar Nova Senha');
-      setSecurityDialogDescription('Digite a senha do dono para atualizar a senha do cliente.');
+      setSecurityDialogDescription(
+        'Digite a senha do dono para gerar uma nova senha oficial do cliente.'
+      );
       setSecurityDialogConfirmLabel('Atualizar Senha');
     } else if (action === 'view-password') {
       setSecurityDialogTitle('Confirmar Visualização');
@@ -302,7 +282,7 @@ export const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
       try {
         setIsActionLoading(true);
         setActionError(null);
-        await verifyOwnerPassword(adminPassword);
+        await revealOfficialPassword(adminPassword);
         setShowPassword((prev) => !prev);
         setSecurityDialogOpen(false);
         setPendingSecureAction(null);
@@ -318,8 +298,10 @@ export const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
       try {
         setIsActionLoading(true);
         setActionError(null);
-        await verifyOwnerPassword(adminPassword);
-        await handleCopyPassword();
+        const password = await revealOfficialPassword(adminPassword);
+        await copyPasswordToClipboard(password);
+        setCopiedToClipboard(true);
+        setTimeout(() => setCopiedToClipboard(false), 2000);
         setSecurityDialogOpen(false);
         setPendingSecureAction(null);
       } catch (err) {
@@ -334,8 +316,16 @@ export const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
       try {
         setIsActionLoading(true);
         setActionError(null);
-        await verifyOwnerPassword(adminPassword);
-        handleSharePassword();
+        const password = await revealOfficialPassword(adminPassword);
+
+        if (!customer?.phone) {
+          throw new Error('Cliente sem telefone para compartilhamento via WhatsApp');
+        }
+
+        openWhatsAppMessage(
+          customer.phone,
+          buildAccessWhatsAppMessage(customer.nickname || 'Cliente', password)
+        );
         setSecurityDialogOpen(false);
         setPendingSecureAction(null);
       } catch (err) {
@@ -372,10 +362,13 @@ export const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
             <div className={styles.detailSection}>
               <h3>Informações do Cliente</h3>
               <div className={styles.detailGrid}>
-                <div className={styles.detailItem}>
-                  <label>Nome Comercial</label>
-                  <p>{customer.company_name || customer.nickname || '-'}</p>
-                </div>
+                {customer.company_name &&
+                  customer.company_name.trim() !== customer.nickname?.trim() && (
+                    <div className={styles.detailItem}>
+                      <label>Nome Comercial</label>
+                      <p>{customer.company_name}</p>
+                    </div>
+                  )}
                 <div className={styles.detailItem}>
                   <label>Apelido</label>
                   <p>{customer.nickname || '-'}</p>
@@ -384,10 +377,12 @@ export const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                   <label>Tipo</label>
                   <p>{customer.customer_type === 'PF' ? 'Pessoa Física' : 'Pessoa Jurídica'}</p>
                 </div>
-                <div className={styles.detailItem}>
-                  <label>CPF/CNPJ</label>
-                  <p>{customer.cnpj_cpf || '-'}</p>
-                </div>
+                {customer.cnpj_cpf && (
+                  <div className={styles.detailItem}>
+                    <label>CPF/CNPJ</label>
+                    <p>{customer.cnpj_cpf}</p>
+                  </div>
+                )}
                 <div className={styles.detailItem}>
                   <label>Telefone</label>
                   <p>
@@ -501,49 +496,18 @@ export const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
 
                   <div className={styles.formGroup}>
                     <label>Senha de Acesso*</label>
-                    <div className={styles.passwordInlineRow}>
-                      <input
-                        type={showPassword ? 'text' : 'password'}
-                        value={passwordGenerated}
-                        readOnly
-                        placeholder="Senha será gerada..."
-                        className={styles.passwordReadOnlyInput}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => openSecurityDialog('view-password')}
-                        className={styles.inlinePasswordAction}
-                        disabled={isActionLoading}
-                      >
-                        👁️
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleGenerateNewPassword}
-                        className={styles.inlinePasswordAction}
-                        disabled={isActionLoading}
-                      >
-                        🔄 Gerar
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => openSecurityDialog('copy-password')}
-                        className={styles.inlinePasswordAction}
-                        disabled={!passwordGenerated || isActionLoading}
-                      >
-                        {copiedToClipboard ? '✓ Copiado' : '📋 Copiar'}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => openSecurityDialog('share-password')}
-                        className={styles.inlinePasswordAction}
-                        disabled={isActionLoading || !customer.phone}
-                      >
-                        💬 WhatsApp
-                      </button>
-                    </div>
+                    <input
+                      type="text"
+                      value=""
+                      readOnly
+                      placeholder="Senha será gerada na aprovação"
+                      className={styles.passwordReadOnlyInput}
+                    />
                   </div>
                 </div>
+                <p className={styles.helperText}>
+                  A senha oficial será gerada quando este cadastro for aprovado.
+                </p>
               </div>
             )}
 
@@ -556,7 +520,7 @@ export const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                     <div className={styles.passwordInlineRow}>
                       <input
                         type={showPassword ? 'text' : 'password'}
-                        value={passwordGenerated}
+                        value={currentPassword}
                         readOnly
                         className={styles.passwordReadOnlyInput}
                       />
@@ -564,6 +528,7 @@ export const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                         type="button"
                         onClick={() => openSecurityDialog('view-password')}
                         className={styles.inlinePasswordAction}
+                        disabled={isActionLoading}
                       >
                         👁️
                       </button>
@@ -571,6 +536,7 @@ export const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                         type="button"
                         onClick={() => openSecurityDialog('copy-password')}
                         className={styles.inlinePasswordAction}
+                        disabled={isActionLoading}
                       >
                         {copiedToClipboard ? '✓ Copiado' : '📋 Copiar'}
                       </button>

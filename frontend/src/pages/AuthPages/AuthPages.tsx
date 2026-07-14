@@ -67,9 +67,7 @@ export function RegisterPage() {
           <p className={styles.successDetail}>
             Apelido cadastrado: <strong>{registeredNickname}</strong>
           </p>
-          <p className={styles.successSubtext}>
-            Você será contatado em breve com sua senha de acesso.
-          </p>
+          <p className={styles.successSubtext}>Aguarde a aprovação para receber a senha oficial.</p>
           <div className={styles.successActions}>
             <Button variant="primary" onClick={handleCloseModal}>
               ✅ Ir para Home

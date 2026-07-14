@@ -311,6 +311,7 @@ class CustomerViewSet(viewsets.ModelViewSet):
         customer.approved_at = timezone.now()
         customer.credit_limit = limit_decimal
         customer.user.set_password(password)
+        customer.set_access_password_plain(password_plain_text)
         customer.user.save()
         customer.save()
         
@@ -504,12 +505,12 @@ class CustomerViewSet(viewsets.ModelViewSet):
         # Validar nova senha
         password = request.data.get('password')
         confirm_password = request.data.get('confirm_password')
-        
-        if not password or not confirm_password:
-            return Response(
-                {'detail': 'password e confirm_password são obrigatórios'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+
+        if not password:
+            password = generate_random_password(length=8)
+            confirm_password = password
+        elif not confirm_password:
+            confirm_password = password
         
         # Validar senha
         valid, msg = validate_customer_password(password)
@@ -530,7 +531,9 @@ class CustomerViewSet(viewsets.ModelViewSet):
         # Atualizar senha do cliente
         customer = self.get_object()
         customer.user.set_password(password)
+        customer.set_access_password_plain(password)
         customer.user.save()
+        customer.save(update_fields=['access_password_ciphertext', 'updated_at'])
         
         # Registrar auditoria
         CustomerAuditLog.objects.create(
@@ -543,7 +546,45 @@ class CustomerViewSet(viewsets.ModelViewSet):
         )
         
         return Response(
-            {'detail': 'Senha definida com sucesso'},
+            {
+                'detail': 'Senha definida com sucesso',
+                'password_plain_text': password,
+            },
+            status=status.HTTP_200_OK
+        )
+
+    @action(detail=True, methods=['post'], url_path='reveal-password', permission_classes=[IsAuthenticated])
+    def reveal_password(self, request, pk=None):
+        if not request.user.is_staff:
+            return Response(
+                {'detail': 'Apenas administradores podem visualizar a senha'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        admin_password = request.data.get('admin_password')
+        if not admin_password:
+            return Response(
+                {'detail': 'admin_password é obrigatória'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if not request.user.check_password(admin_password):
+            return Response(
+                {'detail': 'Senha do administrador incorreta'},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+
+        customer = self.get_object()
+        password_plain_text = customer.get_access_password_plain()
+
+        if not password_plain_text:
+            return Response(
+                {'detail': 'Senha oficial não está disponível para este cliente'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        return Response(
+            {'password_plain_text': password_plain_text},
             status=status.HTTP_200_OK
         )
 

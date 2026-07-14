@@ -1,6 +1,10 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.core.validators import RegexValidator
+from django.conf import settings
+from cryptography.fernet import Fernet, InvalidToken
+import base64
+import hashlib
 from decimal import Decimal
 
 class Customer(models.Model):
@@ -97,6 +101,7 @@ class Customer(models.Model):
     )
 
     credit_limit = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    access_password_ciphertext = models.TextField(blank=True, null=True)
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -131,6 +136,29 @@ class Customer(models.Model):
             and self.credit_limit > Decimal('0.00')
             and self.available_credit() > Decimal('0.00')
         )
+
+    @staticmethod
+    def _get_password_fernet():
+        key_material = hashlib.sha256(settings.SECRET_KEY.encode('utf-8')).digest()
+        return Fernet(base64.urlsafe_b64encode(key_material))
+
+    def set_access_password_plain(self, password: str):
+        if not password:
+            self.access_password_ciphertext = ''
+            return
+
+        fernet = self._get_password_fernet()
+        self.access_password_ciphertext = fernet.encrypt(password.encode('utf-8')).decode('utf-8')
+
+    def get_access_password_plain(self):
+        if not self.access_password_ciphertext:
+            return None
+
+        try:
+            fernet = self._get_password_fernet()
+            return fernet.decrypt(self.access_password_ciphertext.encode('utf-8')).decode('utf-8')
+        except (InvalidToken, ValueError):
+            return None
 
     def available_credit(self):
         """

@@ -1,5 +1,55 @@
 # Registro de Alterações
 
+## [2026-07-13] - Sessão Cliente Mobile Refinada ✅
+
+### FASE: Consolidação da Experiência do Cliente para Demonstração
+
+**Status:** ✅ PRONTA PARA TESTES MANUAIS
+
+#### Entregas Principais:
+1. **Header mobile compacto do cliente** com apelido, status e botão Sair.
+2. **SmartSection reutilizável** com hamburger, animação suave de 0.3s e comportamento sticky quando aberto.
+3. **Regra de um bloco aberto por vez** no mobile para reduzir ruído visual.
+4. **Dashboard do cliente reorganizada** em blocos colapsáveis:
+   - Informações da Conta
+   - Resumo Financeiro
+   - Meus Pedidos
+   - Histórico de Pagamentos
+5. **Novo Pedido migrado para o mesmo padrão colapsável**.
+6. **Resumo financeiro padronizado** com os rótulos:
+   - Saldo Limite
+   - Saldo Utilizado
+   - Saldo Disponível
+7. **Pedidos reorganizados no formato “caderno”**:
+   ordem cronológica antiga → nova, com foco automático no pedido mais recente ao abrir.
+8. **Card de pedido orientado a pagamento**:
+   título por data/hora do pedido, remoção de entrega como eixo principal e badge textual de pagamento.
+9. **Informações da Conta expandidas** para refletir melhor o modal admin:
+   nome comercial, apelido, tipo, telefone, CPF/CNPJ condicional e endereço.
+10. **Novo Pedido alinhado à regra operacional real**:
+    cliente não escolhe método de pagamento; endereço de entrega fica pré-preenchido e editável.
+
+#### Correções Relevantes:
+1. **Hook order fix no OrdersList** - corrigido erro de runtime que gerava tela branca.
+2. **Colapso real de altura nos blocos fechados** - removido espaço em branco indevido.
+3. **Sincronização da sessão do cliente** com `/api/customers/me/` para evitar dados financeiros desatualizados.
+4. **Guardas de sessão e redirecionamento** para evitar estados vazios no dashboard e em Novo Pedido.
+5. **ProtectedRoute legado corrigido** para usar `bread_customer_token`.
+
+#### Escopo Atual de Teste Manual:
+1. Cadastrar um novo cliente.
+2. Aprovar o cliente no admin.
+3. Fazer login no mobile.
+4. Validar os quatro blocos colapsáveis da dashboard.
+5. Criar múltiplos pedidos e observar o comportamento de Meus Pedidos.
+6. Validar o endereço padrão editável em Dados da Entrega.
+7. Repetir o fluxo com outro cliente.
+
+#### Pendência Planejada para a Próxima Fase:
+- Sessão admin para registrar baixa real de pagamento do pedido, com método recebido e data/hora, refletindo depois no card do cliente.
+
+---
+
 ## [2026-07-10] - Phase 5: Order Creation Interface ✅
 
 ### PHASE 5: Customer Order Creation - COMPLETED

@@ -50,6 +50,7 @@ export function useRegister(options: UseRegisterOptions = {}) {
         const result: RegistrationResponse = {
           id: response.id,
           nickname: response.customer.nickname,
+          phone: response.customer.phone,
           status: response.customer.status || 'PENDENTE',
           access_token: response.access_token,
           refresh_token: response.refresh_token,
