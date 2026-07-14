@@ -114,12 +114,17 @@ def admin_stats(request):
         status=Customer.ApprovalStatus.APPROVED
     ).count()
     
-    # Saldo a receber atual: soma dos pedidos em crédito ainda em aberto.
-    # Nesta fase do produto, o limite do cliente é consumido no ato da criação do pedido.
-    # Pedidos cancelados deixam de compor o valor pendente.
+    # Saldo utilizado: mesmo conceito do campo "GASTO" na tela de clientes,
+    # considerando apenas crédito em aberto (status PENDING).
+    used_balance = (
+        Order.objects.filter(payment_method='CREDIT', status='PENDING')
+        .aggregate(total=Sum('total_value'))['total']
+        or Decimal('0.00')
+    )
+
+    # Saldo a receber: somente pedidos ainda pendentes de pagamento.
     balance_receivable = (
-        Order.objects.filter(payment_method='CREDIT')
-        .exclude(status='CANCELLED')
+        Order.objects.filter(payment_method='CREDIT', status='PENDING')
         .aggregate(total=Sum('total_value'))['total']
         or Decimal('0.00')
     )
@@ -128,6 +133,7 @@ def admin_stats(request):
         'total_customers': total_customers,
         'pending_customers': pending_customers,
         'approved_customers': approved_customers,
+        'used_balance': str(used_balance),
         'balance_receivable': str(balance_receivable),
         'currency': 'BRL'
     }, status=status.HTTP_200_OK)

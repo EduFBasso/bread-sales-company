@@ -79,12 +79,12 @@ export function DashboardPage({ onNavigateToCustomers, onError, onSuccess }: Das
 
       {/* Balance Section */}
       <section className={styles.balanceSection}>
-        <h2>💰 Saldo a Receber</h2>
+        <h2>💰 Saldo Utilizado</h2>
         <div className={styles.balanceCard}>
           <p className={styles.balanceValue}>
-            R$ {loading ? '...' : stats?.balance_receivable || '0.00'}
+            R$ {loading ? '...' : stats?.used_balance || stats?.balance_receivable || '0.00'}
           </p>
-          <p className={styles.balanceLabel}>Valor total pendente</p>
+          <p className={styles.balanceLabel}>Total de gasto em pedidos no crédito</p>
         </div>
       </section>
     </div>

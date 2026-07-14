@@ -12,10 +12,7 @@ export function AdminOrdersPage() {
   return (
     <div className={styles.container}>
       <header className={styles.header}>
-        <h1>📦 Gerenciamento de Pedidos</h1>
-        <button className={styles.refreshBtn} onClick={handleRefresh}>
-          🔄 Atualizar
-        </button>
+        <h1>Gerenciamento de Pedidos</h1>
       </header>
 
       <AdminOrdersPanel key={refreshTrigger} onRefresh={handleRefresh} />

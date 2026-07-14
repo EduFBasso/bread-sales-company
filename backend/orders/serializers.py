@@ -42,7 +42,7 @@ class OrderSerializer(serializers.ModelSerializer):
             'order_date', 'delivery_date', 'payment_method', 'payment_method_display', 'notes', 
             'shipping_zip_code', 'shipping_street', 'shipping_number', 
             'shipping_complement', 'shipping_neighborhood', 'shipping_city', 'shipping_state',
-            'total_value', 'items', 'created_at', 'updated_at'
+            'total_value', 'items', 'paid_at', 'cancelled_at', 'cancellation_reason', 'created_at', 'updated_at'
         ]
         read_only_fields = ['total_value', 'created_at', 'updated_at']
 

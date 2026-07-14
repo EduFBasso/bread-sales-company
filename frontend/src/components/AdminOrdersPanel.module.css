@@ -25,6 +25,7 @@
   display: flex;
   gap: 1rem;
   flex-wrap: wrap;
+  align-items: center;
   padding-bottom: 1rem;
   border-bottom: 1px solid #e0e0e0;
 }
@@ -113,18 +114,21 @@
 }
 
 .expandBtn {
-  background: none;
-  border: none;
-  font-size: 1rem;
+  background: #fff;
+  border: 1px solid #d0d0d0;
+  border-radius: 0.3rem;
+  font-size: 0.85rem;
+  font-weight: 600;
   cursor: pointer;
-  padding: 0.25rem 0.5rem;
+  padding: 0.35rem 0.7rem;
+  min-width: 70px;
   color: #D4825C;
-  font-weight: bold;
-  transition: transform 0.2s;
+  transition: all 0.2s;
 }
 
 .expandBtn:hover {
-  transform: scale(1.2);
+  background-color: #f9f2ee;
+  border-color: #D4825C;
 }
 
 /* Linhas Expandidas */
@@ -189,11 +193,32 @@
 /* Botões de Ação */
 .actionButtons {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  flex-wrap: wrap;
   gap: 1rem;
   padding: 1rem;
   background-color: white;
   border-radius: 0.25rem;
+}
+
+.payBtn {
+  padding: 0.75rem 1.25rem;
+  background-color: #2e8b57;
+  color: white;
+  border: none;
+  border-radius: 0.25rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.payBtn:hover {
+  background-color: #267549;
+}
+
+.payBtn:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
 }
 
 .statusUpdateContainer {
@@ -397,6 +422,15 @@
   .statusUpdateContainer {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .actionButtons {
+    flex-direction: column;
+  }
+
+  .payBtn,
+  .cancelBtn {
+    width: 100%;
   }
 
   .statusSelect {

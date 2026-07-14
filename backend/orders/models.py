@@ -54,6 +54,7 @@ class Order(models.Model):
     shipping_state = models.CharField(max_length=2, help_text="UF (ex: SP)")
 
     payment_method = models.CharField(max_length=20, choices=PAYMENT_CHOICES)
+    paid_at = models.DateTimeField(blank=True, null=True, help_text="Data/hora da confirmação de pagamento")
     notes = models.TextField(blank=True)
     total_value = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
     cancellation_reason = models.TextField(blank=True, null=True, help_text="Motivo do cancelamento")

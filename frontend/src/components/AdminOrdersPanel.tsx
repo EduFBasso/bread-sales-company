@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
-import { useAdminOrders } from '../hooks/useAdminOrders';
+import { AdminPasswordDialog } from '../pages/AdminPages/AdminPasswordDialog';
+import { AdminOrder, useAdminOrders } from '../hooks/useAdminOrders';
 import { useUpdateOrderStatus } from '../hooks/useUpdateOrderStatus';
 import { useCancelOrder } from '../hooks/useCancelOrder';
 import styles from './AdminOrdersPanel.module.css';
 
-const ORDER_STATUSES = [
-  { value: 'PENDING', label: 'Pendente', color: '#F4A460' },
-  { value: 'CONFIRMED', label: 'Confirmado', color: '#32CD32' },
-  { value: 'DELIVERED', label: 'Entregue', color: '#1E90FF' },
-  { value: 'CANCELLED', label: 'Cancelado', color: '#DC143C' },
+const PAYMENT_FILTERS = [
+  { value: '', label: 'Todos os Status' },
+  { value: 'PENDING', label: 'Pendente' },
+  { value: 'PAID', label: 'Pago' },
+  { value: 'CANCELLED', label: 'Cancelado' },
 ];
 
 interface AdminOrdersPanelProps {
@@ -19,44 +20,78 @@ export function AdminOrdersPanel({ onRefresh }: AdminOrdersPanelProps) {
   const [filters, setFilters] = useState({
     status: '',
     customer_nickname: '',
+    date_from: '',
+    date_to: '',
     page: 1,
     page_size: 20,
   });
 
   const [expandedOrderId, setExpandedOrderId] = useState<number | null>(null);
-  const [showCancelDialog, setShowCancelDialog] = useState<number | null>(null);
-  const [cancelReason, setCancelReason] = useState('');
+  const [securityDialogOpen, setSecurityDialogOpen] = useState(false);
+  const [securityAction, setSecurityAction] = useState<'pay' | 'cancel' | null>(null);
+  const [selectedOrder, setSelectedOrder] = useState<AdminOrder | null>(null);
 
   const { orders, loading, error, pagination } = useAdminOrders(filters);
-  const { updateStatus, loading: statusLoading } = useUpdateOrderStatus();
-  const { cancelOrder, loading: cancelLoading } = useCancelOrder();
+  const { updateStatus, loading: statusLoading, error: statusError } = useUpdateOrderStatus();
+  const { cancelOrder, loading: cancelLoading, error: cancelError } = useCancelOrder();
 
-  const handleStatusChange = async (orderId: number, newStatus: string) => {
-    const result = await updateStatus(orderId, newStatus);
-    if (result) {
-      onRefresh?.();
+  const isActionLoading = statusLoading || cancelLoading;
+
+  const getPaymentInfo = (order: AdminOrder) => {
+    if (order.status === 'CANCELLED') {
+      return { value: 'CANCELLED', label: 'Cancelado', color: '#DC143C' };
     }
+
+    if (order.status === 'CONFIRMED' || order.status === 'DELIVERED') {
+      return { value: 'PAID', label: 'Pago', color: '#2E8B57' };
+    }
+
+    return { value: 'PENDING', label: 'Pendente', color: '#F4A460' };
   };
 
-  const handleCancelOrder = async () => {
-    if (!showCancelDialog || !cancelReason.trim()) return;
-
-    const result = await cancelOrder(showCancelDialog, cancelReason);
-    if (result) {
-      setCancelReason('');
-      setShowCancelDialog(null);
-      onRefresh?.();
+  const formatDateTime = (value?: string | null) => {
+    if (!value) {
+      return '—';
     }
+    return new Date(value).toLocaleString('pt-BR');
   };
 
-  const getStatusInfo = (status: string) => {
-    return (
-      ORDER_STATUSES.find((s) => s.value === status) || {
-        value: status,
-        label: status,
-        color: '#999',
+  const openSecurityAction = (action: 'pay' | 'cancel', order: AdminOrder) => {
+    setSecurityAction(action);
+    setSelectedOrder(order);
+    setSecurityDialogOpen(true);
+  };
+
+  const closeSecurityDialog = () => {
+    setSecurityDialogOpen(false);
+    setSecurityAction(null);
+    setSelectedOrder(null);
+  };
+
+  const handleSecurityConfirm = async (adminPassword: string) => {
+    if (!selectedOrder || !securityAction) {
+      return;
+    }
+
+    if (securityAction === 'pay') {
+      const result = await updateStatus(selectedOrder.id, 'CONFIRMED', adminPassword);
+      if (result) {
+        closeSecurityDialog();
+        onRefresh?.();
       }
+      return;
+    }
+
+    const result = await cancelOrder(
+      selectedOrder.id,
+      'Cancelado pelo administrador',
+      'CREDIT',
+      adminPassword
     );
+    if (result) {
+      closeSecurityDialog();
+      onRefresh?.();
+    }
   };
 
   const toggleExpanded = (orderId: number) => {
@@ -84,16 +119,31 @@ export function AdminOrdersPanel({ onRefresh }: AdminOrdersPanelProps) {
           onChange={(e) => setFilters({ ...filters, status: e.target.value, page: 1 })}
           className={styles.filterSelect}
         >
-          <option value="">Todos os Status</option>
-          {ORDER_STATUSES.map((s) => (
+          {PAYMENT_FILTERS.map((s) => (
             <option key={s.value} value={s.value}>
               {s.label}
             </option>
           ))}
         </select>
+
+        <input
+          type="date"
+          value={filters.date_from}
+          onChange={(e) => setFilters({ ...filters, date_from: e.target.value, page: 1 })}
+          className={styles.filterInput}
+        />
+
+        <input
+          type="date"
+          value={filters.date_to}
+          onChange={(e) => setFilters({ ...filters, date_to: e.target.value, page: 1 })}
+          className={styles.filterInput}
+        />
       </div>
 
-      {error && <div className={styles.error}>Erro: {error}</div>}
+      {(error || statusError || cancelError) && (
+        <div className={styles.error}>Erro: {error || statusError || cancelError}</div>
+      )}
 
       {/* Tabela de Pedidos */}
       <div className={styles.tableContainer}>
@@ -102,10 +152,10 @@ export function AdminOrdersPanel({ onRefresh }: AdminOrdersPanelProps) {
             <tr>
               <th>Pedido</th>
               <th>Cliente</th>
-              <th>Status</th>
+              <th>Pagamento</th>
               <th>Data</th>
               <th>Total</th>
-              <th>Ações</th>
+              <th>Detalhes</th>
             </tr>
           </thead>
           <tbody>
@@ -117,9 +167,9 @@ export function AdminOrdersPanel({ onRefresh }: AdminOrdersPanelProps) {
                   <td>
                     <span
                       className={styles.statusBadge}
-                      style={{ backgroundColor: getStatusInfo(order.status).color }}
+                      style={{ backgroundColor: getPaymentInfo(order).color }}
                     >
-                      {getStatusInfo(order.status).label}
+                      {getPaymentInfo(order).label}
                     </span>
                   </td>
                   <td>{new Date(order.order_date).toLocaleDateString('pt-BR')}</td>
@@ -132,7 +182,7 @@ export function AdminOrdersPanel({ onRefresh }: AdminOrdersPanelProps) {
                         toggleExpanded(order.id);
                       }}
                     >
-                      {expandedOrderId === order.id ? '▼' : '▶'}
+                      {expandedOrderId === order.id ? 'Ocultar' : 'Ver'}
                     </button>
                   </td>
                 </tr>
@@ -152,6 +202,14 @@ export function AdminOrdersPanel({ onRefresh }: AdminOrdersPanelProps) {
                             <p>{order.payment_method}</p>
                           </div>
                           <div>
+                            <strong>Pagamento Confirmado em:</strong>
+                            <p>{formatDateTime(order.paid_at)}</p>
+                          </div>
+                          <div>
+                            <strong>Cancelado em:</strong>
+                            <p>{formatDateTime(order.cancelled_at)}</p>
+                          </div>
+                          <div>
                             <strong>Itens:</strong>
                             <ul className={styles.itemsList}>
                               {order.items.map((item, idx) => (
@@ -166,69 +224,26 @@ export function AdminOrdersPanel({ onRefresh }: AdminOrdersPanelProps) {
 
                         {/* Botões de Ação */}
                         <div className={styles.actionButtons}>
-                          {order.status !== 'CANCELLED' && order.status !== 'DELIVERED' && (
-                            <div className={styles.statusUpdateContainer}>
-                              <label>Atualizar Status:</label>
-                              <select
-                                value=""
-                                onChange={(e) => {
-                                  if (e.target.value) {
-                                    handleStatusChange(order.id, e.target.value);
-                                  }
-                                }}
-                                className={styles.statusSelect}
-                                disabled={statusLoading}
-                              >
-                                <option value="">Selecionar novo status...</option>
-                                {ORDER_STATUSES.filter((s) => s.value !== order.status).map((s) => (
-                                  <option key={s.value} value={s.value}>
-                                    → {s.label}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
+                          {getPaymentInfo(order).value === 'PENDING' && (
+                            <button
+                              className={styles.payBtn}
+                              disabled={isActionLoading}
+                              onClick={() => openSecurityAction('pay', order)}
+                            >
+                              ✅ Marcar como pago
+                            </button>
                           )}
 
-                          {order.status !== 'CANCELLED' && order.status !== 'DELIVERED' && (
+                          {order.status !== 'CANCELLED' && (
                             <button
                               className={styles.cancelBtn}
-                              onClick={() => setShowCancelDialog(order.id)}
+                              disabled={isActionLoading}
+                              onClick={() => openSecurityAction('cancel', order)}
                             >
-                              Cancelar Pedido
+                              ✖ Cancelar Pedido
                             </button>
                           )}
                         </div>
-
-                        {/* Dialog de Cancelamento */}
-                        {showCancelDialog === order.id && (
-                          <div className={styles.cancelDialog}>
-                            <label>Motivo do cancelamento:</label>
-                            <textarea
-                              value={cancelReason}
-                              onChange={(e) => setCancelReason(e.target.value)}
-                              placeholder="Ex: Cliente solicitou cancelamento"
-                              className={styles.cancelReasonInput}
-                            />
-                            <div className={styles.cancelDialogButtons}>
-                              <button
-                                className={styles.confirmBtn}
-                                onClick={handleCancelOrder}
-                                disabled={!cancelReason.trim() || cancelLoading}
-                              >
-                                Confirmar Cancelamento
-                              </button>
-                              <button
-                                className={styles.abortBtn}
-                                onClick={() => {
-                                  setShowCancelDialog(null);
-                                  setCancelReason('');
-                                }}
-                              >
-                                Voltar
-                              </button>
-                            </div>
-                          </div>
-                        )}
                       </div>
                     </td>
                   </tr>
@@ -257,6 +272,21 @@ export function AdminOrdersPanel({ onRefresh }: AdminOrdersPanelProps) {
           Próxima →
         </button>
       </div>
+
+      <AdminPasswordDialog
+        isOpen={securityDialogOpen}
+        title={securityAction === 'pay' ? 'Confirmar Pagamento' : 'Confirmar Cancelamento'}
+        description={
+          securityAction === 'pay'
+            ? 'Digite a senha do dono para marcar este pedido como pago.'
+            : 'Digite a senha do dono para cancelar este pedido.'
+        }
+        confirmLabel={securityAction === 'pay' ? 'Confirmar Pagamento' : 'Confirmar Cancelamento'}
+        isLoading={isActionLoading}
+        error={statusError || cancelError}
+        onClose={closeSecurityDialog}
+        onConfirm={handleSecurityConfirm}
+      />
     </div>
   );
 }

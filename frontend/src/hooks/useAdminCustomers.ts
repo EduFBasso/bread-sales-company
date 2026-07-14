@@ -35,6 +35,7 @@ interface AdminStats {
   total_customers: number;
   pending_customers: number;
   approved_customers: number;
+  used_balance?: string;
   balance_receivable: string;
   currency: string;
 }

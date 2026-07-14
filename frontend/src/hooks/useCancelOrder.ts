@@ -21,7 +21,8 @@ export function useCancelOrder() {
   const cancelOrder = async (
     orderId: number,
     reason: string,
-    refund_method: string = 'CREDIT'
+    refund_method: string = 'CREDIT',
+    adminPassword: string
   ): Promise<CancelOrderResponse | null> => {
     const token = localStorage.getItem('bread_admin_token');
     if (!token) {
@@ -39,7 +40,7 @@ export function useCancelOrder() {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ reason, refund_method }),
+        body: JSON.stringify({ reason, refund_method, admin_password: adminPassword }),
       });
 
       if (!response.ok) {

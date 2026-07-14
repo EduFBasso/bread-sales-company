@@ -37,19 +37,6 @@ export function CustomersPage({ initialFilter, onError, onSuccess }: CustomersPa
   }, [activeSubTab, searchInput, fetchAllCustomers]);
 
   useEffect(() => {
-    const intervalId = window.setInterval(() => {
-      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') {
-        return;
-      }
-
-      const status = activeSubTab === 'pending' ? 'PENDENTE' : undefined;
-      fetchAllCustomers({ status, search: searchInput || undefined });
-    }, 8000);
-
-    return () => window.clearInterval(intervalId);
-  }, [activeSubTab, searchInput, fetchAllCustomers]);
-
-  useEffect(() => {
     if (successMessage) {
       const timer = setTimeout(() => setSuccessMessage(''), 3000);
       return () => clearTimeout(timer);

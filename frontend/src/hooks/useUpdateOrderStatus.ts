@@ -18,7 +18,8 @@ export function useUpdateOrderStatus() {
 
   const updateStatus = async (
     orderId: number,
-    newStatus: string
+    newStatus: string,
+    adminPassword: string
   ): Promise<UpdateOrderStatusResponse | null> => {
     const token = localStorage.getItem('bread_admin_token');
     if (!token) {
@@ -36,7 +37,7 @@ export function useUpdateOrderStatus() {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ status: newStatus }),
+        body: JSON.stringify({ status: newStatus, admin_password: adminPassword }),
       });
 
       if (!response.ok) {

@@ -7,6 +7,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
+from django.utils.dateparse import parse_date
 
 from orders.models import Order
 from orders.serializers import OrderSerializer
@@ -89,16 +90,43 @@ def admin_orders_list(request):
         # Filtrar por data (range)
         date_from = request.query_params.get('date_from')
         if date_from:
-            orders = orders.filter(created_at__gte=date_from)
-        
+            parsed_date_from = parse_date(date_from)
+            if not parsed_date_from:
+                return Response(
+                    {'detail': 'Formato inválido para date_from. Use YYYY-MM-DD'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            orders = orders.filter(created_at__date__gte=parsed_date_from)
+
         date_to = request.query_params.get('date_to')
         if date_to:
-            orders = orders.filter(created_at__lte=date_to)
+            parsed_date_to = parse_date(date_to)
+            if not parsed_date_to:
+                return Response(
+                    {'detail': 'Formato inválido para date_to. Use YYYY-MM-DD'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            orders = orders.filter(created_at__date__lte=parsed_date_to)
         
         # Aplicar paginação
         from rest_framework.pagination import PageNumberPagination
         paginator = PageNumberPagination()
-        paginator.page_size = request.query_params.get('page_size', 20)
+        page_size_raw = request.query_params.get('page_size', 20)
+        try:
+            page_size = int(page_size_raw)
+        except (TypeError, ValueError):
+            return Response(
+                {'detail': 'page_size deve ser um inteiro válido'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if page_size <= 0:
+            return Response(
+                {'detail': 'page_size deve ser maior que zero'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        paginator.page_size = page_size
         page = paginator.paginate_queryset(orders, request)
         
         if page is not None:
@@ -156,6 +184,20 @@ def admin_update_order_status(request, order_id):
         # Buscar pedido
         order = get_object_or_404(Order, pk=order_id)
         
+        # Validar senha do admin
+        admin_password = request.data.get('admin_password')
+        if not admin_password:
+            return Response(
+                {'detail': 'admin_password é obrigatória'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if not request.user.check_password(admin_password):
+            return Response(
+                {'detail': 'Senha do administrador incorreta'},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+
         # Validar novo status
         new_status = request.data.get('status', '').upper()
         valid_statuses = [choice[0] for choice in Order.STATUS_CHOICES]
@@ -172,9 +214,24 @@ def admin_update_order_status(request, order_id):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
+        # Primeira entrega: pagamento controlado pelo dono/admin
+        # A ação de "marcar pago" usa status CONFIRMED
+        if new_status == 'CONFIRMED' and order.status == 'CANCELLED':
+            return Response(
+                {'detail': 'Pedido cancelado não pode ser marcado como pago'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         # Atualizar status
         old_status = order.status
         order.status = new_status
+
+        if new_status == 'CONFIRMED':
+            order.paid_at = timezone.now()
+
+        if new_status == 'PENDING':
+            order.paid_at = None
+
         order.save()
         
         # Registrar log/transação se necessário
@@ -227,6 +284,20 @@ def admin_cancel_order(request, order_id):
                 status=status.HTTP_403_FORBIDDEN
             )
         
+        # Validar senha do admin
+        admin_password = request.data.get('admin_password')
+        if not admin_password:
+            return Response(
+                {'detail': 'admin_password é obrigatória'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if not request.user.check_password(admin_password):
+            return Response(
+                {'detail': 'Senha do administrador incorreta'},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+
         # Buscar pedido
         order = get_object_or_404(Order, pk=order_id)
         
@@ -251,6 +322,7 @@ def admin_cancel_order(request, order_id):
         order.status = 'CANCELLED'
         order.cancellation_reason = reason
         order.cancelled_at = timezone.now()
+        order.paid_at = None
         order.save()
         
         # Se deve fazer reembolso (opcional)

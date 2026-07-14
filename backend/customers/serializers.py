@@ -43,10 +43,14 @@ class CustomerSerializer(serializers.ModelSerializer):
 
         from orders.models import Order
 
+        # Regra de negócio: "saldo utilizado" representa apenas crédito em aberto.
+        # Após pagamento (CONFIRMED/DELIVERED), o limite volta a ficar disponível.
         used = (
-            Order.objects.filter(customer=obj, payment_method='CREDIT')
-            .exclude(status='CANCELLED')
-            .aggregate(total=Sum('total_value'))['total']
+            Order.objects.filter(
+                customer=obj,
+                payment_method='CREDIT',
+                status='PENDING'
+            ).aggregate(total=Sum('total_value'))['total']
             or Decimal('0.00')
         )
         limit = obj.credit_limit or Decimal('0.00')

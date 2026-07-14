@@ -85,6 +85,9 @@ export function OrdersList({ showHeader = true, isExpanded = false }: OrdersList
 
   const getStatusLabel = (status: string) => {
     switch (status) {
+      case 'CONFIRMED':
+      case 'DELIVERED':
+        return '✅ Pago';
       case 'CANCELLED':
         return '✕ Não aplicável';
       default:

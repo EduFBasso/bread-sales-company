@@ -11,6 +11,9 @@ export interface AdminOrder {
   delivery_date: string;
   total_value: string;
   payment_method: string;
+  paid_at?: string | null;
+  cancelled_at?: string | null;
+  cancellation_reason?: string | null;
   items: any[];
 }
 
@@ -24,6 +27,8 @@ export interface AdminOrdersResponse {
 export function useAdminOrders(filters?: {
   status?: string;
   customer_nickname?: string;
+  date_from?: string;
+  date_to?: string;
   page?: number;
   page_size?: number;
 }) {
@@ -51,9 +56,14 @@ export function useAdminOrders(filters?: {
       try {
         // Build query string
         const params = new URLSearchParams();
-        if (filters?.status) params.append('status', filters.status);
+        if (filters?.status) {
+          const statusValue = filters.status === 'PAID' ? 'CONFIRMED,DELIVERED' : filters.status;
+          params.append('status', statusValue);
+        }
         if (filters?.customer_nickname)
           params.append('customer_nickname', filters.customer_nickname);
+        if (filters?.date_from) params.append('date_from', filters.date_from);
+        if (filters?.date_to) params.append('date_to', filters.date_to);
         if (filters?.page) params.append('page', filters.page.toString());
         if (filters?.page_size) params.append('page_size', filters.page_size.toString());
 
@@ -68,7 +78,16 @@ export function useAdminOrders(filters?: {
         });
 
         if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          let detail = '';
+          try {
+            const errorData = await response.json();
+            detail = errorData?.detail || '';
+          } catch {
+            detail = '';
+          }
+
+          const suffix = detail ? ` - ${detail}` : '';
+          throw new Error(`HTTP ${response.status}: ${response.statusText}${suffix}`);
         }
 
         const data: AdminOrdersResponse = await response.json();
