@@ -16,6 +16,8 @@ export interface Order {
   customer_id: number;
   status: 'PENDING' | 'CONFIRMED' | 'DELIVERED' | 'CANCELLED';
   order_date: string;
+  paid_at?: string | null;
+  updated_at?: string;
   total_value: string;
   delivery_date: string | null;
   notes: string | null;
