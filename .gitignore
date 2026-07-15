@@ -20,6 +20,7 @@ staticfiles/
 # --- Frontend / Node ---
 frontend/node_modules/
 frontend/dist/
+frontend/coverage/
 frontend/src/**/*.js
 frontend/src/**/*.js.map
 frontend/*.tsbuildinfo
