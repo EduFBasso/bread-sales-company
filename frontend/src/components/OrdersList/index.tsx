@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
-import { useCustomerOrders } from '../hooks/useCustomerOrders';
-import styles from './OrdersList.module.css';
+import { useCustomerOrders } from '../../hooks/useCustomerOrders';
+import styles from './styles.module.css';
 
 interface OrdersListProps {
   showHeader?: boolean;
@@ -19,7 +19,7 @@ export function OrdersList({ showHeader = true, isExpanded = false }: OrdersList
       return;
     }
 
-    // Aguarda a animação do bloco para posicionar na última linha (pedido mais recente).
+    // Aguarda a animacao do bloco para posicionar na ultima linha (pedido mais recente).
     const timer = window.setTimeout(() => {
       lastOrderRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }, 320);
@@ -103,7 +103,7 @@ export function OrdersList({ showHeader = true, isExpanded = false }: OrdersList
       minute: '2-digit',
       hour12: false,
     });
-    return `Pedido ${datePart} às ${timePart}`;
+    return `Pedido ${datePart} as ${timePart}`;
   };
 
   return (

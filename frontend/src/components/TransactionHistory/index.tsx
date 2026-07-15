@@ -1,5 +1,5 @@
-import { useCustomerOrders } from '../hooks/useCustomerOrders';
-import styles from './TransactionHistory.module.css';
+import { useCustomerOrders } from '../../hooks/useCustomerOrders';
+import styles from './styles.module.css';
 
 interface TransactionHistoryProps {
   showHeader?: boolean;
